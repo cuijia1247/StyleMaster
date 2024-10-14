@@ -12,13 +12,13 @@ import torchvision.transforms as transforms_o
 import random
 import tqdm
 from scipy import spatial
-from Vic.utils import criterion, get_byol_transforms, MultiViewDataInjector
+from ssc.utils import criterion, get_byol_transforms, MultiViewDataInjector
 import cv2
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Dataset for painting91
-class VicRDataset(Dataset):
+class SscDataset(Dataset):
     def __init__(self, dataSource, dataTyep, transform, resize_height=128, resize_width=128):
         """
         :param featureName: feature file name , xxx.npy if the file exists
@@ -127,5 +127,5 @@ if __name__ == '__main__':
     dataTyep = 'train'
     transformT, transformT1, transformEvalT = get_byol_transforms(64, (0.485, 0.456, 0.406),
                                                                   (0.229, 0.224, 0.225))
-    temp = VicRDataset(dataSource, dataTyep, transform=MultiViewDataInjector([transformT, transformT1]))
+    temp = SscDataset(dataSource, dataTyep, transform=MultiViewDataInjector([transformT, transformT1]))
     print('Dataset is done.')

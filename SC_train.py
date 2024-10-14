@@ -9,10 +9,10 @@ import torchvision.models as models
 import torchvision.datasets as datasets
 from torch.autograd import Variable
 import numpy as np
-from Vic.Vicreg import VicReg
-from Vic.utils import criterion, get_byol_transforms, MultiViewDataInjector
+from ssc.Vicreg import SscReg
+from ssc.utils import criterion, get_byol_transforms, MultiViewDataInjector
 from tqdm import tqdm
-from VicDataSet import VicRDataset
+from SscDataSet import SscDataset
 
 #setup device for cuda or cpu
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -51,10 +51,10 @@ transformT, transformT1, transformEvalT = get_byol_transforms(image_size, (0.485
 #setup dataset & dataloader
 dataSource = './data/Painting91/'
 trainData = 'train'
-trainset = VicRDataset(dataSource, trainData, transform=MultiViewDataInjector([transformT, transformT1]))
+trainset = SscDataset(dataSource, trainData, transform=MultiViewDataInjector([transformT, transformT1]))
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
 testData = 'test'
-testset = VicRDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
+testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
 testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
 
 #classfication
@@ -65,7 +65,7 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle
 
 lr = base_lr*batch_size/offset_bs
 
-model = VicReg(input_size=2048, output_size = 2048, backend='resnet50')
+model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
 resnet50 = models.resnet50(pretrained=True)
 resnet50.fc = nn.Linear(2048, 2048)
 resnet50 = resnet50.eval()
