@@ -1,4 +1,4 @@
-# VicReg
+# VicReg wainting for change later
 ## A VicReg Implementation in pytorch [VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning](https://arxiv.org/abs/2105.04906)
 
 ![VicReg architecture image from the paper](https://github.com/markpesic/VicReg/blob/master/images/vicreg.png?raw=true)

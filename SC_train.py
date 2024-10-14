@@ -9,7 +9,7 @@ import torchvision.models as models
 import torchvision.datasets as datasets
 from torch.autograd import Variable
 import numpy as np
-from ssc.Vicreg import SscReg
+from ssc.Sscreg import SscReg
 from ssc.utils import criterion, get_byol_transforms, MultiViewDataInjector
 from tqdm import tqdm
 from SscDataSet import SscDataset
