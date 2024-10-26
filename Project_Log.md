@@ -8,7 +8,7 @@
 - [x] record all the accuracy & loss in log
 - [x] record best accuracy digitals in log
 - [ ] re-build train_optimaization.py for optimal parameter finding
-- [ ] add new file to record all the experimental data
+- [x] add new file to record all the experimental data
 - [ ] test activation function: ReLU, SiLU, SELU sigmoid
 - [ ] test patch size: 32, 64, 128, 156
 - [ ] test offside_bs: 512, 256, 128, 64
