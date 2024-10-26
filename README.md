@@ -10,9 +10,9 @@ Thanks for the contribution of code repository list
  * CUDA (optional)
  * Pytorch
 using the commands shown below to install the necessary packages:
-'''
+```
 pip install -r requirements.txt
-'''
+```
 
 ## Model
 ```python
@@ -30,6 +30,6 @@ model = SscReg(
 
 
 ## Citation
-'''
+```
 waiting for our new released paper citation
-'''
+```
