@@ -31,5 +31,5 @@ model = SscReg(
 
 ## Citation
 '''
-waiting for our new released paper citition
+waiting for our new released paper citation
 '''
