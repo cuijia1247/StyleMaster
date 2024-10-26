@@ -1,4 +1,5 @@
-# SSC (SubStyleClassification done by CJ in Oct. 26th 2024)
+# SSC 
+(SubStyleClassification done by CJ in Oct. 26th 2024)
 ## waiting for the new paper, released soon
 Thanks for the contribution of code repository list
  * VicReg
