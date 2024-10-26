@@ -1,7 +1,13 @@
-# SSC wainting for change later
-## A VicReg Implementation in pytorch [VICReg: Variance-Invariance-Covariance Regularization for Self-Supervised Learning](https://arxiv.org/abs/2105.04906)
+# SSC (SubStyleClassification done by CJ in Oct. 26th 2024)
+## waiting for the new paper, released soon
+Thanks for the contribution of code repository list
+ * VicReg
+ * SimCLR
+ * Barlow Twin
+ * ...
 
-![VicReg architecture image from the paper](https://github.com/markpesic/VicReg/blob/master/images/vicreg.png?raw=true)
+## Installation
+
 
 ## Model
 ```python
