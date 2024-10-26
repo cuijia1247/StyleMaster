@@ -18,15 +18,15 @@ from SscDataSet import SscDataset
 #setup device for cuda or cpu
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-def SSCtrain(logger, save_iteration, model_path):
+def SSCtrain(logger, save_iteration, model_path, current_time):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-    logger.debug('/3-level/ classifier /(2048, 1024, 256, 13)/, /ReLU/, /200/ iteration, lr = /0.0005/')
+    logger.debug('/3-level/ classifier /(2048, 1024, 256, 13)/, /ReLU/, /100/ iteration, lr = /0.0005/')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.info('SSC parameter setting up...')
     #the training parameters
     epochs = 1001
     batch_size = 64
-    offset_bs = 256
+    offset_bs = 512
     base_lr = 0.05
     image_size = 64 # 32*32
     logger.info('epochs = %d', epochs)
@@ -60,27 +60,16 @@ def SSCtrain(logger, save_iteration, model_path):
     optimizer = optim.SGD( params, lr=lr, weight_decay=1.5e-6)
     logger.info('SSC model is ready...')
 
-    # set up the classification model
-    classifier = nn.Sequential(
-        nn.Linear(2048, 1024),
-        nn.ReLU(),
-        # nn.Linear(4096, 1024),
-        # nn.ReLU(),
-        nn.Linear(1024, 256),
-        nn.ReLU(),
-        nn.Linear(256, 13),
-        # nn.ReLU(),
-    ).cuda()
-    classifier_criterion = nn.CrossEntropyLoss()
-    classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=0.0005)
-    total_loss = 0.0
-    style_loss = torch.zeros(1).cuda()
-    logger.info('SSC classifier model is ready...')
+
+    # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
+    time_str = current_time
 
     for epoch in range(epochs):
         # print('epoch is {}'.format(epoch))
         tk0 = trainloader
         train_loss = []
+        best_accuracy = 0.0
+        last_accuracy = 0.0
         # temploss = total_loss / (1860*100)
         for view1, view2, label, name, _ in tk0:
             view1 = view1.to(device)
@@ -96,7 +85,23 @@ def SSCtrain(logger, save_iteration, model_path):
             logger.info('The epoch is %d, Vic train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
         #train the style classifier every 500 iterations
-        if epoch%200 == 0:
+        if epoch%100 == 0:
+            # set up the classification model
+            classifier = nn.Sequential(
+                nn.Linear(2048, 1024),
+                nn.ReLU(),
+                # nn.Linear(4096, 1024),
+                # nn.ReLU(),
+                nn.Linear(1024, 256),
+                nn.ReLU(),
+                nn.Linear(256, 13),
+                # nn.ReLU(),
+            ).cuda()
+            classifier_criterion = nn.CrossEntropyLoss()
+            classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=0.0005)
+            total_loss = 0.0
+            style_loss = torch.zeros(1).cuda()
+            logger.info('SSC classifier model is ready...')
             # model.eval()
             correct = 0.0
             total_number = len(trainset)
@@ -136,7 +141,7 @@ def SSCtrain(logger, save_iteration, model_path):
                 # total_loss += style_loss
                 trainstyle_loss.append(style_loss.item())
                     # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                if i % 10 == 9:
+                if i % 20 == 19:
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct, len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
                 if i % 40 == 39:
@@ -170,18 +175,29 @@ def SSCtrain(logger, save_iteration, model_path):
                         correct_ += pred.eq(label.data.view_as(pred)).cpu().sum()
                         # correct = idx.eq(label).cpu().sum()
                         test_correct += correct_
+
                     # print('TEST RESULTS: The test round is {}, the test ratio is {}/{}, the test accuracy is {}'.format(i,
                     #             test_correct, len(testset), float(test_correct/len(testset))))
+                    test_accuracy = float(test_correct/len(testset))
+                    last_accuracy = test_accuracy
+                    if test_accuracy > best_accuracy: # the current best classifier
+                        best_accuracy = test_accuracy
+                        lt_classifier_name = 'SSR-resnet50-' + time_str + '-SSC-classifier-best.pth'
+                        lt_base_name = 'SSR-resnet50-' + time_str + '-SSC-base-best.pth'
+                        torch.save(model, model_path + lt_base_name)
+                        torch.save(classifier, model_path + lt_classifier_name)
+                        logger.info('The best models are saved. The best accuracy is %f', best_accuracy)
                     logger.info('TEST RESULTS: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i, test_correct,
-                                len(testset), float(test_correct/len(testset)))
+                                len(testset), test_accuracy)
             total_loss += np.mean(trainstyle_loss)
             total_loss = total_loss / 50
             if epoch > 0:
                 if epoch == epochs-1 or epoch%save_iteration==0 :
-                    lt_base_name = 'SSR-resnet50-' + str(epoch) + '-lt-base.pth'
-                    lt_classifier_name = 'SSR-resnet50-' + str(epoch) + '-lt-classifier.pth'
+                    lt_classifier_name = 'SSR-resnet50-' + time_str + '-SSC-classifier-last.pth'
+                    lt_base_name = 'SSR-resnet50-' + time_str + '-SSC-base-last.pth'
                     torch.save(model, model_path + lt_base_name)
-                    logger.info('epoch %d is saved as lt-base, the model is %s', epoch, lt_base_name)
+                    torch.save(classifier, model_path + lt_classifier_name)
+                    logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
             # print('the epoch is {}, style classifier training loss is {}, correct number is {}/{}'.format(epoch, total_loss, total_correct, total_number))
 
 
@@ -204,7 +220,7 @@ if __name__ == '__main__':
     #begin to train.
     save_iteration = 1001
     model_path = './model/'
-    SSCtrain(logger, save_iteration, model_path)
+    SSCtrain(logger, save_iteration, model_path, current_time)
 
 
 

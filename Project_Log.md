@@ -6,4 +6,4 @@
 - [x] add the train log file writing function
 - [x] add auto-naming function for log
 - [x] record all the accuracy & loss in log
-- [ ] record best accuracy digitals in log
+- [x] record best accuracy digitals in log
