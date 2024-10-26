@@ -1,7 +1,8 @@
 # Author: cuijia1247
 # Date: 2024-7-19
 # version: 1.0
-
+import logging
+import time
 import torch
 from torch import nn
 import torch.optim as optim
@@ -17,16 +18,25 @@ from SscDataSet import SscDataset
 #setup device for cuda or cpu
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-def SSCtrain():
+def SSCtrain(logger, save_iteration, model_path):
+    logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+    logger.debug('/3-level/ classifier /(2048, 1024, 256, 13)/, /ReLU/, /200/ iteration, lr = /0.0005/')
+    logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+    logger.info('SSC parameter setting up...')
     #the training parameters
-    epochs = 5001
+    epochs = 1001
     batch_size = 64
-    offset_bs = 512
+    offset_bs = 256
     base_lr = 0.05
     image_size = 64 # 32*32
+    logger.info('epochs = %d', epochs)
+    logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
+    logger.info('learning rate = %f', base_lr)
+    logger.info('sub patch size = (%d, %d)', image_size, image_size)
 
     #normalize and randomcrop input images
     transformT, transformT1, transformEvalT = get_byol_transforms(image_size, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+
 
     #setup dataset & dataloader
     dataSource = './data/Painting91/'
@@ -36,6 +46,7 @@ def SSCtrain():
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
+    logger.info('SSC ' + dataSource + ' is ready...')
 
     lr = base_lr*batch_size/offset_bs
     #set up the SSC model
@@ -47,7 +58,7 @@ def SSCtrain():
     resnet50 = resnet50.to(device)
     params = model.parameters()
     optimizer = optim.SGD( params, lr=lr, weight_decay=1.5e-6)
-
+    logger.info('SSC model is ready...')
 
     # set up the classification model
     classifier = nn.Sequential(
@@ -64,6 +75,7 @@ def SSCtrain():
     classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=0.0005)
     total_loss = 0.0
     style_loss = torch.zeros(1).cuda()
+    logger.info('SSC classifier model is ready...')
 
     for epoch in range(epochs):
         # print('epoch is {}'.format(epoch))
@@ -81,9 +93,10 @@ def SSCtrain():
             loss.backward()
             optimizer.step()
         if epoch % 50 == 0:
-            print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
+            logger.info('The epoch is %d, Vic train loss is %f', epoch, np.mean(train_loss))
+            # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
         #train the style classifier every 500 iterations
-        if epoch%200 == 1:
+        if epoch%200 == 0:
             # model.eval()
             correct = 0.0
             total_number = len(trainset)
@@ -123,9 +136,10 @@ def SSCtrain():
                 # total_loss += style_loss
                 trainstyle_loss.append(style_loss.item())
                     # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                if i%5 == 4:
-                    print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i%10 == 9:
+                if i % 10 == 9:
+                    logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct, len(trainset))
+                    # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
+                if i % 40 == 39:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
@@ -156,16 +170,41 @@ def SSCtrain():
                         correct_ += pred.eq(label.data.view_as(pred)).cpu().sum()
                         # correct = idx.eq(label).cpu().sum()
                         test_correct += correct_
-                    print('TEST RESULTS: The test round is {}, the test ratio is {}/{}, the test accuracy is {}'.format(i, test_correct, len(testset), float(test_correct/len(testset))))
+                    # print('TEST RESULTS: The test round is {}, the test ratio is {}/{}, the test accuracy is {}'.format(i,
+                    #             test_correct, len(testset), float(test_correct/len(testset))))
+                    logger.info('TEST RESULTS: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i, test_correct,
+                                len(testset), float(test_correct/len(testset)))
             total_loss += np.mean(trainstyle_loss)
             total_loss = total_loss / 50
-            if epoch == epochs:
-                torch.save(model, 'VicR-resnet50-50001.pth')
+            if epoch > 0:
+                if epoch == epochs-1 or epoch%save_iteration==0 :
+                    lt_base_name = 'SSR-resnet50-' + str(epoch) + '-lt-base.pth'
+                    lt_classifier_name = 'SSR-resnet50-' + str(epoch) + '-lt-classifier.pth'
+                    torch.save(model, model_path + lt_base_name)
+                    logger.info('epoch %d is saved as lt-base, the model is %s', epoch, lt_base_name)
             # print('the epoch is {}, style classifier training loss is {}, correct number is {}/{}'.format(epoch, total_loss, total_correct, total_number))
 
 
 if __name__ == '__main__':
-    SSCtrain()
+    #setup logger for record the process data
+    logger = logging.getLogger("my_logger")
+    logger.setLevel(logging.DEBUG)
+
+    handler = logging.StreamHandler()
+    # formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter("%(asctime)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    current_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
+    log_name = current_time + '.log'
+    filehandler = logging.FileHandler("./log/" + log_name)
+    filehandler.setFormatter(formatter)
+    logger.addHandler(filehandler)
+    #begin to train.
+    save_iteration = 1001
+    model_path = './model/'
+    SSCtrain(logger, save_iteration, model_path)
 
 
 
