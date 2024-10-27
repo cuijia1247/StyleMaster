@@ -217,7 +217,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
                     torch.save(classifier, model_path + lt_classifier_name)
                     logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
     logger.info('The best accuracy is %f, and the last accuracy is %f', best_accuracy, last_accuracy)
-    logger.shutdonw()
+
             # print('the epoch is {}, style classifier training loss is {}, correct number is {}/{}'.format(epoch, total_loss, total_correct, total_number))
 
 
@@ -225,7 +225,7 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    base_lr_list = [0.05, 0.01, 0.005, 0.001, 0.0001]
+    base_lr_list = [0.05, 0.03, 0.01, 0.005, 0.001]
     model_name = 'base_lr_optimal'
     #############################
     # begin to train.
@@ -244,7 +244,7 @@ if __name__ == '__main__':
         filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
         SSCtrain(logger, save_iteration, model_path, current_time, ba_lr, model_name)
-
+        logger.removeHandler(filehandler)
 
 
 

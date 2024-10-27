@@ -16,3 +16,4 @@ filehandler.setFormatter(formatter)
 logger.addHandler(filehandler)
 
 logger.info("Hello, logging world.")
+logger.removeHandler(filehandler)
