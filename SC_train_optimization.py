@@ -217,6 +217,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
                     torch.save(classifier, model_path + lt_classifier_name)
                     logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
     logger.info('The best accuracy is %f, and the last accuracy is %f', best_accuracy, last_accuracy)
+    logger.shutdonw()
             # print('the epoch is {}, style classifier training loss is {}, correct number is {}/{}'.format(epoch, total_loss, total_correct, total_number))
 
 
