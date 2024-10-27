@@ -221,29 +221,32 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
 
 
 if __name__ == '__main__':
-    #setup logger for record the process data
-    logger = logging.getLogger("my_logger")
-    logger.setLevel(logging.DEBUG)
-
-    handler = logging.StreamHandler()
-    # formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    formatter = logging.Formatter("%(asctime)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    #############################
-    model_name = 'base_lr_optimal'
-    #############################
-    current_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
-    log_name = model_name + '-' + current_time + '.log'
-    filehandler = logging.FileHandler("./log/" + log_name)
-    filehandler.setFormatter(formatter)
-    logger.addHandler(filehandler)
-    #begin to train.
     save_iteration = 1001
     model_path = './model/'
+    #############################
     base_lr_list = [0.05, 0.01, 0.005, 0.001, 0.0001]
+    model_name = 'base_lr_optimal'
+    #############################
+    # begin to train.
     for ba_lr in base_lr_list:
+        # setup logger for record the process data
+        logger = logging.getLogger("my_logger")
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler()
+        # formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter("%(asctime)s - %(message)s")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        current_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
+        log_name = model_name + '-' + current_time + '.log'
+        filehandler = logging.FileHandler("./log/" + log_name)
+        filehandler.setFormatter(formatter)
+        logger.addHandler(filehandler)
         SSCtrain(logger, save_iteration, model_path, current_time, ba_lr, model_name)
+
+
+
+
 
 
 
