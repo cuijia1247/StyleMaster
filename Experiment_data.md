@@ -9,7 +9,7 @@ The experiment data on Painting 91 for optimal parameter finding.
 | 0.005   |0.691176|0.661765|loss reduce slowly
 | 0.001   |0.695378|0.682773|loss reduce slowly very much, but the lower bound is much better
 
-second-round:0.012, 0.01, 0.008, 0.005
+second-round:0.012, 0.01, 0.008, 0.0005
 
 | base_lr |best_accuracy|last_accuracy|information|
 |---------|-|-|-|
