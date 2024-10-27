@@ -225,7 +225,7 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    base_lr_list = [0.05, 0.03, 0.01, 0.005, 0.001]
+    base_lr_list = [0.012, 0.01, 0.008, 0.0005]
     model_name = 'base_lr_optimal'
     #############################
     # begin to train.
