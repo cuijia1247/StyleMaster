@@ -230,19 +230,20 @@ if __name__ == '__main__':
     formatter = logging.Formatter("%(asctime)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
+    #############################
+    model_name = 'base_lr_optimal'
+    #############################
     current_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
-    log_name = current_time + '.log'
+    log_name = model_name + '-' + current_time + '.log'
     filehandler = logging.FileHandler("./log/" + log_name)
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
     #begin to train.
     save_iteration = 1001
     model_path = './model/'
-    batch_size_list = [32, 64, 128, 256]
-    model_name = 'base_lr_optimal'
-    SSCtrain(logger, save_iteration, model_path, current_time, model_name)
-
+    base_lr_list = [0.01, 0.05, 0.001, 0.005, 0.0001]
+    for ba_lr in base_lr_list:
+        SSCtrain(logger, save_iteration, model_path, current_time, ba_lr, model_name)
 
 
 
