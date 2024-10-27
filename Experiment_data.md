@@ -13,9 +13,8 @@ second-round:0.012, 0.01, 0.008, 0.0005
 
 | base_lr |best_accuracy|last_accuracy|information|
 |---------|-|-|-|
-|0.012|
-|0.01|
-|0.008|
-|0.0005|
+| 0.01    |0.701681|0.613445|loss fluctuates|
+| 0.008   |0.707983|0.644958|loss reduce slowly|
+| 0.0005  |0.686975|...|too slow
 
 

@@ -205,7 +205,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
                         torch.save(classifier, model_path + lt_classifier_name)
                         logger.info('THE BEST MODEL are saved. The best accuracy is %f, and the current accuracy is %f', best_accuracy, test_accuracy)
                         best_accuracy = test_accuracy
-                    logger.info('TEST RESULTS: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i, test_correct,
+                    logger.info('Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i, test_correct,
                                 len(testset), test_accuracy)
             total_loss += np.mean(trainstyle_loss)
             total_loss = total_loss / 50
@@ -217,7 +217,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
                     torch.save(classifier, model_path + lt_classifier_name)
                     logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
     logger.info('The best accuracy is %f, and the last accuracy is %f', best_accuracy, last_accuracy)
-    logger.shutdown()
+    logging.shutdown()
             # print('the epoch is {}, style classifier training loss is {}, correct number is {}/{}'.format(epoch, total_loss, total_correct, total_number))
 
 
@@ -225,7 +225,7 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    base_lr_list = [0.012, 0.01, 0.008, 0.0005]
+    base_lr_list = [0.01, 0.008, 0.0005]
     model_name = 'base_lr_optimal'
     #############################
     # begin to train.
@@ -244,7 +244,8 @@ if __name__ == '__main__':
         filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
         SSCtrain(logger, save_iteration, model_path, current_time, ba_lr, model_name)
-        logger.removeHandler(filehandler)
+        # logger.removeHandler(filehandler)
+        logging.shutdown()
 
 
 
