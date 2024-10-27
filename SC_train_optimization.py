@@ -203,7 +203,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
                         lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-base-best.pth'
                         torch.save(model, model_path + lt_base_name)
                         torch.save(classifier, model_path + lt_classifier_name)
-                        logger.info('THE BEST MODEL are saved. The best accuracy is %f, and the current accuracy is %f', best_accuracy, test_accuracy)
+                        logger.info('+++THE BEST MODEL is saved+++. The best accuracy is %f, and the current accuracy is %f', best_accuracy, test_accuracy)
                         best_accuracy = test_accuracy
                     logger.info('Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i, test_correct,
                                 len(testset), test_accuracy)
@@ -226,7 +226,8 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    base_epochs_list = [501, 1001, 2001, 3001, 4001, 5001, 6001]
+    # base_epochs_list = [201, 501, 701, 1001, 1501, 3001, 6001]
+    base_epochs_list = [100, 200, 300, 400]
     model_name = 'base_epochs_optimal'
     #############################
     # begin to train.
@@ -245,8 +246,9 @@ if __name__ == '__main__':
         filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
         SSCtrain(logger, save_iteration, model_path, current_time, epoch, model_name)
-        # logger.removeHandler(filehandler)
-        logging.shutdown()
+        logger.removeHandler(filehandler)
+        logger.removeHandler(handler)
+        # logging.shutdown()
 
 
 
