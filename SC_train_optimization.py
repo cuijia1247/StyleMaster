@@ -106,13 +106,13 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
         if epoch%100 == 0:
             # set up the classification model
             classifier = nn.Sequential(
-                nn.Linear(2048, 1024),
+                nn.Linear(2048, 512),
                 nn.ReLU(),
                 # nn.Linear(4096, 1024),
                 # nn.ReLU(),
-                nn.Linear(1024, 256),
-                nn.ReLU(),
-                nn.Linear(256, 13),
+                # nn.Linear(1024, 256),
+                # nn.ReLU(),
+                nn.Linear(512, 13),
                 # nn.ReLU(),
             ).cuda()
             classifier_criterion = nn.CrossEntropyLoss()
@@ -162,7 +162,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
                 if i % 20 == 19:
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct, len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 50 == 49:
+                if i % 40 == 19:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
