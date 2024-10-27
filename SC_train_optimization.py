@@ -226,8 +226,8 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    # base_epochs_list = [201, 501, 701, 1001, 1501, 3001, 6001]
-    base_epochs_list = [100, 200, 300, 400]
+    base_epochs_list = [201, 501, 701, 1001, 1501, 3001, 6001]
+    # base_epochs_list = [100, 200, 300, 400]
     model_name = 'base_epochs_optimal'
     #############################
     # begin to train.
