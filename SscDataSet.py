@@ -58,7 +58,8 @@ class SscDataset(Dataset):
         for subFolder in range(classNum):
             label = subFolder + 1
             newPath = dataPath + '/' + str(label) + '/'
-            for filename in tqdm.tqdm(os.listdir(newPath)):
+            # for filename in tqdm.tqdm(os.listdir(newPath)):
+            for filename in os.listdir(newPath):
                 imgPath = newPath + filename
                 # print('label is {}, filename is {}'.format(label, filename))
                 # img = Image.open(imgPath).convert('RGB')
