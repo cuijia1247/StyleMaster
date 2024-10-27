@@ -203,7 +203,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
                         lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-base-best.pth'
                         torch.save(model, model_path + lt_base_name)
                         torch.save(classifier, model_path + lt_classifier_name)
-                        logger.info('The best models are saved. The best accuracy is %f, and the current accuracy is %f', best_accuracy, test_accuracy)
+                        logger.info('THE BEST MODEL are saved. The best accuracy is %f, and the current accuracy is %f', best_accuracy, test_accuracy)
                         best_accuracy = test_accuracy
                     logger.info('TEST RESULTS: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i, test_correct,
                                 len(testset), test_accuracy)
@@ -217,7 +217,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
                     torch.save(classifier, model_path + lt_classifier_name)
                     logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
     logger.info('The best accuracy is %f, and the last accuracy is %f', best_accuracy, last_accuracy)
-
+    logger.shutdown()
             # print('the epoch is {}, style classifier training loss is {}, correct number is {}/{}'.format(epoch, total_loss, total_correct, total_number))
 
 
