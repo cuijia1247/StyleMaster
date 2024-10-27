@@ -31,18 +31,18 @@ def parameter_load():
     return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name
 
 
-def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_model_name):
+def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_model_name):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.debug('THIS IS SPECIAL FOR OPTIMAL PARAMETER FINDING PROCESS')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     #load all the parameters
     epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifer_lr_, model_name_= parameter_load()
     #the training parameters
-    epochs = epochs_
+    epochs = opt_param####optimal
     batch_size = batch_size_
     offset_bs = offset_bs_
     # base_lr = base_lr_
-    base_lr = opt_ba_lr ####optmial
+    base_lr = 0.008
     image_size = image_size_ # 32*32
     model_name_ = opt_model_name ####optimal
     logger.info('epochs = %d', epochs)
@@ -210,7 +210,8 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_mo
             total_loss += np.mean(trainstyle_loss)
             total_loss = total_loss / 50
             if epoch > 0:
-                if epoch == epochs-1 or epoch%save_iteration==0 :
+                # if epoch == epochs-1 or epoch%save_iteration==0:
+                if epoch == epochs - 1:
                     lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-classifier-last.pth'
                     lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-base-last.pth'
                     torch.save(model, model_path + lt_base_name)
@@ -225,11 +226,11 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    base_lr_list = [0.01, 0.008, 0.0005]
-    model_name = 'base_lr_optimal'
+    base_epochs_list = [501, 1001, 2001, 3001, 4001, 5001, 6001]
+    model_name = 'base_epochs_optimal'
     #############################
     # begin to train.
-    for ba_lr in base_lr_list:
+    for epoch in base_epochs_list:
         # setup logger for record the process data
         logger = logging.getLogger("my_logger")
         logger.setLevel(logging.DEBUG)
@@ -243,7 +244,7 @@ if __name__ == '__main__':
         filehandler = logging.FileHandler("./log/" + log_name)
         filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
-        SSCtrain(logger, save_iteration, model_path, current_time, ba_lr, model_name)
+        SSCtrain(logger, save_iteration, model_path, current_time, epoch, model_name)
         # logger.removeHandler(filehandler)
         logging.shutdown()
 
