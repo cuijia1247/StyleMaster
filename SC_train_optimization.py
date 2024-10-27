@@ -31,7 +31,7 @@ def parameter_load():
     return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name
 
 
-def SSCtrain(logger, save_iteration, model_path, current_time):
+def SSCtrain(logger, save_iteration, model_path, current_time, opt_ba_lr, opt_model_name):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.debug('THIS IS SPECIAL FOR OPTIMAL PARAMETER FINDING PROCESS')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -41,8 +41,10 @@ def SSCtrain(logger, save_iteration, model_path, current_time):
     epochs = epochs_
     batch_size = batch_size_
     offset_bs = offset_bs_
-    base_lr = base_lr_
+    # base_lr = base_lr_
+    base_lr = opt_ba_lr ####optmial
     image_size = image_size_ # 32*32
+    model_name_ = opt_model_name ####optimal
     logger.info('epochs = %d', epochs)
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
     logger.info('SSC learning rate = %f', base_lr)
@@ -98,7 +100,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time):
             loss.backward()
             optimizer.step()
         if epoch % 50 == 0:
-            logger.info('The epoch is %d, Vic train loss is %f', epoch, np.mean(train_loss))
+            logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
         #train the style classifier every 500 iterations
         if epoch%100 == 0:
@@ -237,7 +239,9 @@ if __name__ == '__main__':
     #begin to train.
     save_iteration = 1001
     model_path = './model/'
-    SSCtrain(logger, save_iteration, model_path, current_time)
+    batch_size_list = [32, 64, 128, 256]
+    model_name = 'base_lr_optimal'
+    SSCtrain(logger, save_iteration, model_path, current_time, model_name)
 
 
 

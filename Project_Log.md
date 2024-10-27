@@ -9,7 +9,7 @@
 - [x] record best accuracy digitals in log
 - [x] re-build train_optimaization.py for optimal parameter finding
 - [x] add new file to record all the experimental data
-- [ ] test batch size: 32, 64, 128, 256
+- ~~[ ] test batch size: 32, 64, 128, 256~~
 - [ ] test offset_bs: 512, 256, 128, 64
 - [ ] test base_lr: 0.01, 0.05, 0.001, 0.005, 0.0001
 - [ ] test image_size: 32, 64, 128, 156

@@ -220,7 +220,9 @@ if __name__ == '__main__':
     #begin to train.
     save_iteration = 1001
     model_path = './model/'
-    SSCtrain(logger, save_iteration, model_path, current_time)
+    base_lr_list = [0.01, 0.05, 0.001, 0.005, 0.0001]
+    for ba_lr in base_lr_list:
+        SSCtrain(logger, save_iteration, model_path, current_time, ba_lr)
 
 
 
