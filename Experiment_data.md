@@ -41,13 +41,25 @@ Another test with more clearly test correctness and wrongness samples is require
 
 4. test classifier iteration: 50, 100, 150, 200, 300
 
-| classifier iteration |best_accuracy|last_accuracy| information |       |
+
+|classifier iteration|best_accuracy|last_accuracy| information |
 |---------|-|-|--------------------|
-|50|
-|100|
-|150|
-|200|
-|300|
+|50|0.668067|0.579832|classifier is not trained well|
+|100|0.668067|0.626050|2.950647|
+|150|0.693277|0.630252|2.502351|
+|200|0.680672|0.609244|1.042544|
+|300|0.697479|0.630252|2.511317|
+longger iteration is still useful
+
+5. test classifier lr: 0.0001, 0.0005, 0.00001, 0.00005, 0.000001
+
+| classifier lr |best_accuracy|last_accuracy| information |
+|---------------|-|-|--------------------|
+|0.0001|
+|0.0005|
+|0.00001|
+|0.00005|
+|0.000001|
 
 
 When the SSC loss is lower and lower, the cls accuracy is lower too.

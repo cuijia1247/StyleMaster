@@ -25,7 +25,7 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 100
+    classfier_iteration = 150 #best
     classifier_lr = 0.0005
     model_name = ''
     return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name
@@ -36,7 +36,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
     logger.debug('THIS IS SPECIAL FOR OPTIMAL PARAMETER FINDING PROCESS')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     #load all the parameters
-    epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifer_lr_, model_name_= parameter_load()
+    epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_= parameter_load()
     #the training parameters
     epochs = epochs_
     batch_size = batch_size_
@@ -44,13 +44,14 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
     base_lr = base_lr_
     image_size = image_size_
     model_name_ = opt_model_name ####optimal
-    classifier_iteration_ = opt_param ####optimal
+    # classifier_iteration_ = opt_param ####optimal
+    classifier_lr_ = opt_param ####optimal
     logger.info('epochs = %d', epochs)
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
     logger.info('SSC learning rate = %f', base_lr)
     logger.info('sub patch size = (%d, %d)', image_size, image_size)
     logger.info('classifier iteration is %d', classifier_iteration_)
-    logger.info('classifier learning rate = %f', classifer_lr_)
+    logger.info('classifier learning rate = %f', classifier_lr_)
     logger.info('model name is %s', model_name_)
 
     #normalize and randomcrop input images
@@ -116,7 +117,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
                 # nn.ReLU(),
             ).cuda()
             classifier_criterion = nn.CrossEntropyLoss()
-            classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifer_lr_)
+            classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
             total_loss = 0.0
             style_loss = torch.zeros(1).cuda()
             # logger.info('SSC classifier model is ready...')
@@ -226,12 +227,12 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    classifier_iteration_list = [50, 100, 150, 200, 300]
+    classifier_lr_list = [0.0001, 0.0005, 0.00001, 0.00005, 0.000001]
     # base_epochs_list = [100, 200, 300, 400]
-    model_name = 'classifier_iteration_optimal'
+    model_name = 'classifier_lr_optimal'
     #############################
     # begin to train.
-    for classifier_iteration in classifier_iteration_list:
+    for classifier_lr in classifier_lr_list:
         # setup logger for record the process data
         logger = logging.getLogger("my_logger")
         logger.setLevel(logging.DEBUG)
@@ -245,7 +246,7 @@ if __name__ == '__main__':
         filehandler = logging.FileHandler("./log/" + log_name)
         filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
-        SSCtrain(logger, save_iteration, model_path, current_time, classifier_iteration, model_name)
+        SSCtrain(logger, save_iteration, model_path, current_time, classifier_lr, model_name)
         logger.removeHandler(filehandler)
         logger.removeHandler(handler)
         # logging.shutdown()
