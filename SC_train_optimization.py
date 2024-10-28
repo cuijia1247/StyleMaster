@@ -20,10 +20,10 @@ from SscDataSet import SscDataset
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 1501
+    epochs = 1501 #best, perhaps3001
     batch_size_ = 64
     offset_bs = 512
-    base_lr = 0.008
+    base_lr = 0.008 #best
     image_size = 64
     classfier_iteration = 100
     classifier_lr = 0.0005
