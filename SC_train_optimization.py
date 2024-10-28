@@ -20,10 +20,10 @@ from SscDataSet import SscDataset
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 1001
+    epochs = 1501
     batch_size_ = 64
     offset_bs = 512
-    base_lr = 0.05
+    base_lr = 0.008
     image_size = 64
     classfier_iteration = 100
     classifier_lr = 0.0005
@@ -38,12 +38,11 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
     #load all the parameters
     epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifer_lr_, model_name_= parameter_load()
     #the training parameters
-    epochs = opt_param####optimal
+    epochs = epochs_
     batch_size = batch_size_
     offset_bs = offset_bs_
-    # base_lr = base_lr_
-    base_lr = 0.008
-    image_size = image_size_ # 32*32
+    base_lr = base_lr_
+    image_size = opt_param ####optimal
     model_name_ = opt_model_name ####optimal
     logger.info('epochs = %d', epochs)
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
@@ -226,12 +225,12 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    base_epochs_list = [201, 501, 701, 1001, 1501, 3001, 6001]
+    image_size_list = [32, 64, 128, 156]
     # base_epochs_list = [100, 200, 300, 400]
-    model_name = 'base_epochs_optimal'
+    model_name = 'image_size_optimal'
     #############################
     # begin to train.
-    for epoch in base_epochs_list:
+    for image_size in image_size_list:
         # setup logger for record the process data
         logger = logging.getLogger("my_logger")
         logger.setLevel(logging.DEBUG)
@@ -245,7 +244,7 @@ if __name__ == '__main__':
         filehandler = logging.FileHandler("./log/" + log_name)
         filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
-        SSCtrain(logger, save_iteration, model_path, current_time, epoch, model_name)
+        SSCtrain(logger, save_iteration, model_path, current_time, image_size, model_name)
         logger.removeHandler(filehandler)
         logger.removeHandler(handler)
         # logging.shutdown()

@@ -19,7 +19,7 @@ second-round:0.012, 0.01, 0.008, 0.0005
 
 2. test epochs: 201, 501, 701, 1001, 1501, 3001, 6001
 
-| base_lr |best_accuracy|last_accuracy| information         |
+| epochs |best_accuracy|last_accuracy| information         |
 |---------|-|-|---------------------|
 |201|0.689076|0.663866| unoptimal, 3.395692 |
 |501|0.689076|0.680672| unoptimal, 3.362261 |
@@ -28,6 +28,15 @@ second-round:0.012, 0.01, 0.008, 0.0005
 |1501|0.699580|0.640756|2.946231|
 |3001|0.707983|0.636555|2.129976
 |6001|0.716387|0.684874|not finished
+
+3. test image size: 32, 64, 128, 156
+
+| image size |best_accuracy|last_accuracy| information         |
+|---------|-|-|---------------------|
+|32|
+|64|
+|128|
+|156|
 
 When the SSC loss is lower and lower, the cls accuracy is lower too.
 The potential reason is the loss of SSC which is calculated on contents instead of style
