@@ -33,13 +33,18 @@ second-round:0.012, 0.01, 0.008, 0.0005
 
 | image size |best_accuracy|last_accuracy| information         |
 |---------|-|-|---------------------|
-|32|
-|64|
-|128|
-|156|
+|32|0.686975|0.636555|2.286774, classifier is less trained
+|64|0.705882|0.638655|3.136801, the patch size is bigger, the loss reduction is slower
+|128|0.697479|0.592437|3.316861, the same with '64'|
+|156|0.678571|0.630252|not finished|
+Another test with more clearly test correctness and wrongness samples is required later.
+
+4. 
+
 
 When the SSC loss is lower and lower, the cls accuracy is lower too.
 The potential reason is the loss of SSC which is calculated on contents instead of style
 Another option: when the loss is lower, the classifer training iterations should be increased.
 The classifier training iterations could be adjustablely changed.
 also, the classifier lr should be smaller than the current one.
+Dropuot is also should be considered later.
