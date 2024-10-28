@@ -103,7 +103,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
             logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
         #train the style classifier every 500 iterations
-        if epoch%100 == 0:
+        if epoch%200 == 199:
             # set up the classification model
             classifier = nn.Sequential(
                 nn.Linear(2048, 512),
