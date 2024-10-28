@@ -25,7 +25,7 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 150 #best
+    classfier_iteration = 300 #best
     classifier_lr = 0.0005
     model_name = ''
     return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name
@@ -227,7 +227,7 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    classifier_lr_list = [0.0001, 0.0005, 0.00001, 0.00005, 0.000001]
+    classifier_lr_list = [0.00005]
     # base_epochs_list = [100, 200, 300, 400]
     model_name = 'classifier_lr_optimal'
     #############################
