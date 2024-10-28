@@ -31,8 +31,8 @@ second-round:0.012, 0.01, 0.008, 0.0005
 
 3. test image size: 32, 64, 128, 156
 
-| image size |best_accuracy|last_accuracy| information         |
-|---------|-|-|---------------------|
+| image size |best_accuracy|last_accuracy| information|
+|-|-|-|-|
 |32|0.686975|0.636555|2.286774, classifier is less trained
 |64|0.705882|0.638655|3.136801, the patch size is bigger, the loss reduction is slower
 |128|0.697479|0.592437|3.316861, the same with '64'|
@@ -43,7 +43,7 @@ Another test with more clearly test correctness and wrongness samples is require
 
 
 |classifier iteration|best_accuracy|last_accuracy| information |
-|---------|-|-|--------------------|
+|-|-|-|-|
 |50|0.668067|0.579832|classifier is not trained well|
 |100|0.668067|0.626050|2.950647|
 |150|0.693277|0.630252|2.502351|
@@ -54,7 +54,7 @@ longger iteration is still useful
 5. test classifier lr: 0.0001, 0.0005, 0.00001, 0.00005, 0.000001
 
 | classifier lr |best_accuracy|last_accuracy| information |
-|---------------|-|-|--------------------|
+|-|-|-|-|
 |0.0001|
 |0.0005|
 |0.00001|
