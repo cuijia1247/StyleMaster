@@ -24,7 +24,7 @@ def parameter_load():
     batch_size_ = 64
     offset_bs = 512
     base_lr = 0.008 #best
-    image_size = 64
+    image_size = 64 #best
     classfier_iteration = 100
     classifier_lr = 0.0005
     model_name = ''
@@ -42,8 +42,9 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
     batch_size = batch_size_
     offset_bs = offset_bs_
     base_lr = base_lr_
-    image_size = opt_param ####optimal
+    image_size = image_size_
     model_name_ = opt_model_name ####optimal
+    classifier_iteration_ = opt_param ####optimal
     logger.info('epochs = %d', epochs)
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
     logger.info('SSC learning rate = %f', base_lr)
@@ -102,7 +103,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
             logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
         #train the style classifier every 500 iterations
-        if epoch%300 == 299 or epoch==epochs-1:
+        if epoch % 300 == 299 or epoch == epochs-1:
             # set up the classification model
             classifier = nn.Sequential(
                 nn.Linear(2048, 512),
@@ -161,7 +162,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
                 if i % 20 == 19:
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct, len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 40 == 19:
+                if i % 50 == 49:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
@@ -225,12 +226,12 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    image_size_list = [32, 64, 128, 156]
+    classifier_iteration_list = [50, 100, 150, 200, 300]
     # base_epochs_list = [100, 200, 300, 400]
-    model_name = 'image_size_optimal'
+    model_name = 'classifier_iteration_optimal'
     #############################
     # begin to train.
-    for image_size in image_size_list:
+    for classifier_iteration in classifier_iteration_list:
         # setup logger for record the process data
         logger = logging.getLogger("my_logger")
         logger.setLevel(logging.DEBUG)
@@ -244,7 +245,7 @@ if __name__ == '__main__':
         filehandler = logging.FileHandler("./log/" + log_name)
         filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
-        SSCtrain(logger, save_iteration, model_path, current_time, image_size, model_name)
+        SSCtrain(logger, save_iteration, model_path, current_time, classifier_iteration, model_name)
         logger.removeHandler(filehandler)
         logger.removeHandler(handler)
         # logging.shutdown()

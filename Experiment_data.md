@@ -39,7 +39,15 @@ second-round:0.012, 0.01, 0.008, 0.0005
 |156|0.678571|0.630252|not finished|
 Another test with more clearly test correctness and wrongness samples is required later.
 
-4. 
+4. test classifier iteration: 50, 100, 150, 200, 300
+
+| classifier iteration |best_accuracy|last_accuracy| information |       |
+|---------|-|-|--------------------|
+|50|
+|100|
+|150|
+|200|
+|300|
 
 
 When the SSC loss is lower and lower, the cls accuracy is lower too.
