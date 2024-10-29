@@ -25,7 +25,7 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 300 #best
+    classfier_iteration = 150 #best
     classifier_lr = 0.0005 #best
     model_name = ''
     return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name
@@ -197,7 +197,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
                 if i % 20 == 19:
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct, len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 50 == 49:
+                if i % 30 == 29:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
