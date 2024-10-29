@@ -106,16 +106,50 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
         #train the style classifier every 500 iterations
         if epoch % 300 == 299 or epoch == epochs-1:
             # set up the classification model
-            classifier = nn.Sequential(
-                nn.Linear(2048, 512),
-                nn.ReLU(),
-                # nn.Linear(4096, 1024),
-                # nn.ReLU(),
-                # nn.Linear(1024, 256),
-                # nn.ReLU(),
-                nn.Linear(512, 13),
-                # nn.ReLU(),
-            ).cuda()
+            if opt_param=='ReLU':
+                classifier = nn.Sequential(
+                    nn.Linear(2048, 512),
+                    nn.ReLU(),
+                    # nn.Linear(4096, 1024),
+                    # nn.ReLU(),
+                    # nn.Linear(1024, 256),
+                    # nn.ReLU(),
+                    nn.Linear(512, 13),
+                    # nn.ReLU(),
+                ).cuda()
+            elif opt_param=='SiLU':
+                classifier = nn.Sequential(
+                    nn.Linear(2048, 512),
+                    nn.SiLU(),
+                    # nn.Linear(4096, 1024),
+                    # nn.ReLU(),
+                    # nn.Linear(1024, 256),
+                    # nn.ReLU(),
+                    nn.Linear(512, 13),
+                    # nn.ReLU(),
+                ).cuda()
+            elif opt_param=='SELU':
+                classifier = nn.Sequential(
+                    nn.Linear(2048, 512),
+                    nn.SELU(),
+                    # nn.Linear(4096, 1024),
+                    # nn.ReLU(),
+                    # nn.Linear(1024, 256),
+                    # nn.ReLU(),
+                    nn.Linear(512, 13),
+                    # nn.ReLU(),
+                ).cuda()
+            elif opt_param=='Softsign':
+                classifier = nn.Sequential(
+                    nn.Linear(2048, 512),
+                    nn.Softsign(),
+                    # nn.Linear(4096, 1024),
+                    # nn.ReLU(),
+                    # nn.Linear(1024, 256),
+                    # nn.ReLU(),
+                    nn.Linear(512, 13),
+                    # nn.ReLU(),
+                ).cuda()
             classifier_criterion = nn.CrossEntropyLoss()
             classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
             total_loss = 0.0
@@ -227,12 +261,12 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    classifier_lr_list = [0.00005]
+    classifier_activate_list = ['ReLU', 'SiLU', 'SELU', 'Softsign']
     # base_epochs_list = [100, 200, 300, 400]
-    model_name = 'classifier_lr_optimal'
+    model_name = 'classifier_activate_optimal'
     #############################
     # begin to train.
-    for classifier_lr in classifier_lr_list:
+    for classifier_activate in classifier_activate_list:
         # setup logger for record the process data
         logger = logging.getLogger("my_logger")
         logger.setLevel(logging.DEBUG)
@@ -246,7 +280,7 @@ if __name__ == '__main__':
         filehandler = logging.FileHandler("./log/" + log_name)
         filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
-        SSCtrain(logger, save_iteration, model_path, current_time, classifier_lr, model_name)
+        SSCtrain(logger, save_iteration, model_path, current_time, classifier_activate, model_name)
         logger.removeHandler(filehandler)
         logger.removeHandler(handler)
         # logging.shutdown()
