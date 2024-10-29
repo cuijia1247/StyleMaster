@@ -229,7 +229,7 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    classifier_activate_list = ['SiLU']
+    classifier_activate_list = ['2048-4096-1024-512-13']
     # base_epochs_list = [100, 200, 300, 400]
     model_name = 'classifier_structure_optimal'
     #############################
