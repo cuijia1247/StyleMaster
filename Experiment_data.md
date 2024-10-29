@@ -63,12 +63,23 @@ longger iteration is still useful
 
 6. test activation function: ReLU, SiLU, SELU, Softsign
 
-| classifier_lr        |best_accuracy|last_accuracy| information |
-|----------------------|-|-|-|
-|ReLU|
-|SiLU|
-|SELU|
-|Softsign|
+| classifier_activation |best_accuracy|last_accuracy| information |
+|-----------------------|-|-|-|
+| ReLU                  |0.693277|0.632353|
+| SiLU                  |0.701681|0.626050|
+| SELU                  |0.697479|0.638655|
+| Softsign              |0.680672|0.632353|
+
+7. test classifier structures
+
+| classifier_structures |best_accuracy|last_accuracy| information |
+|-----------------------|-|-|-|
+| 2048-4096-1024-512-13 |
+| 2048-1024-512-13      |
+| 2048-512-256-13       |
+| 2048-1024-512-256-13  |
+
+
 
 When the SSC loss is lower and lower, the cls accuracy is lower too.
 The potential reason is the loss of SSC which is calculated on contents instead of style

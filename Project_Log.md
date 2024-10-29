@@ -17,4 +17,4 @@
 - [x] test classifier iteration: 50, 100, 150, 200, 300 
 - [x] test classifier lr: 0.0001, 0.0005, 0.00001, 0.00005, 0.000001
 - [x] test activation function: ReLU, SiLU, SELU, Softsign
-- [ ] test classifier structures
+- [x] test classifier structures

@@ -52,7 +52,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
     logger.info('sub patch size = (%d, %d)', image_size, image_size)
     logger.info('classifier iteration is %d', classifier_iteration_)
     logger.info('classifier learning rate = %f', classifier_lr_)
-    logger.info('classifier activation = %s', opt_param)####optimal
+    logger.info('classifier structure = %s', opt_param)####optimal
     logger.info('model name is %s', model_name_)
 
     #normalize and randomcrop input images
@@ -107,50 +107,17 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
         #train the style classifier every 500 iterations
         if epoch % 300 == 299 or epoch == epochs-1:
             # set up the classification model
-            if opt_param=='ReLU':
-                classifier = nn.Sequential(
-                    nn.Linear(2048, 512),
-                    nn.ReLU(),
-                    # nn.Linear(4096, 1024),
-                    # nn.ReLU(),
-                    # nn.Linear(1024, 256),
-                    # nn.ReLU(),
-                    nn.Linear(512, 13),
-                    # nn.ReLU(),
-                ).cuda()
-            elif opt_param=='SiLU':
-                classifier = nn.Sequential(
-                    nn.Linear(2048, 512),
-                    nn.SiLU(),
-                    # nn.Linear(4096, 1024),
-                    # nn.ReLU(),
-                    # nn.Linear(1024, 256),
-                    # nn.ReLU(),
-                    nn.Linear(512, 13),
-                    # nn.ReLU(),
-                ).cuda()
-            elif opt_param=='SELU':
-                classifier = nn.Sequential(
-                    nn.Linear(2048, 512),
-                    nn.SELU(),
-                    # nn.Linear(4096, 1024),
-                    # nn.ReLU(),
-                    # nn.Linear(1024, 256),
-                    # nn.ReLU(),
-                    nn.Linear(512, 13),
-                    # nn.ReLU(),
-                ).cuda()
-            elif opt_param=='Softsign':
-                classifier = nn.Sequential(
-                    nn.Linear(2048, 512),
-                    nn.Softsign(),
-                    # nn.Linear(4096, 1024),
-                    # nn.ReLU(),
-                    # nn.Linear(1024, 256),
-                    # nn.ReLU(),
-                    nn.Linear(512, 13),
-                    # nn.ReLU(),
-                ).cuda()
+            classifier = nn.Sequential(
+                nn.Linear(2048, 4096),
+                nn.SiLU(),
+                nn.Linear(4096, 1024),
+                nn.SiLU(),
+                nn.Linear(1024, 512),
+                nn.SiLU(),
+                nn.Linear(512, 13),
+                # nn.ReLU(),
+            ).cuda()
+
             classifier_criterion = nn.CrossEntropyLoss()
             classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
             total_loss = 0.0
@@ -262,9 +229,9 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    classifier_activate_list = ['ReLU', 'SiLU', 'SELU', 'Softsign']
+    classifier_activate_list = ['SiLU']
     # base_epochs_list = [100, 200, 300, 400]
-    model_name = 'classifier_activate_optimal'
+    model_name = 'classifier_structure_optimal'
     #############################
     # begin to train.
     for classifier_activate in classifier_activate_list:
