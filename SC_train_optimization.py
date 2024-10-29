@@ -52,7 +52,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
     logger.info('sub patch size = (%d, %d)', image_size, image_size)
     logger.info('classifier iteration is %d', classifier_iteration_)
     logger.info('classifier learning rate = %f', classifier_lr_)
-    logger.info('classifier activation = %f', opt_param)####optimal
+    logger.info('classifier activation = %s', opt_param)####optimal
     logger.info('model name is %s', model_name_)
 
     #normalize and randomcrop input images
