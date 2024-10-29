@@ -26,7 +26,7 @@ def parameter_load():
     base_lr = 0.008 #best
     image_size = 64 #best
     classfier_iteration = 300 #best
-    classifier_lr = 0.0005
+    classifier_lr = 0.0005 #best
     model_name = ''
     return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name
 
@@ -45,7 +45,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
     image_size = image_size_
     model_name_ = opt_model_name ####optimal
     # classifier_iteration_ = opt_param ####optimal
-    classifier_lr_ = opt_param ####optimal
+    # classifier_lr_ = opt_param ####optimal
     logger.info('epochs = %d', epochs)
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
     logger.info('SSC learning rate = %f', base_lr)

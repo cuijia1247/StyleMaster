@@ -53,14 +53,14 @@ longger iteration is still useful
 
 5. test classifier lr: 0.0001, 0.0005, 0.00001, 0.00005, 0.000001
 
-| classifier_lr|best_accuracy|last_accuracy| information |
-|--------------|-|-|-|
-| 0.0001       |0.676471|0.661765|1797/1862|
-| 0.0005       |0.705882|0.638655|1739/1862|
-| 0.00001      |0.653361|0.611345|1422/1862, not trained enough|
-| 0.00005      |0.672269|0.634454|1718/1862|
-| 0.000001     |0.495798|0.399160|805/1862, not trained enough|
-|0.000001+500iteration|
+| classifier_lr        |best_accuracy|last_accuracy| information |
+|----------------------|-|-|-|
+| 0.0001               |0.676471|0.661765|1797/1862|
+| 0.0005               |0.705882|0.638655|1739/1862|
+| 0.00001              |0.653361|0.611345|1422/1862, not trained enough|
+| 0.00005              |0.672269|0.634454|1718/1862|
+| 0.000001             |0.495798|0.399160|805/1862, not trained enough|
+| 0.00005+500iteration |0.670168|0.640756|1802/1862, overfitting|
 
 
 When the SSC loss is lower and lower, the cls accuracy is lower too.
