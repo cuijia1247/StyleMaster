@@ -15,6 +15,7 @@ from ssc.Sscreg import SscReg
 from ssc.utils import criterion, get_byol_transforms, MultiViewDataInjector
 from tqdm import tqdm
 from SscDataSet import SscDataset
+from ssc.classifier import Classifier
 
 #setup device for cuda or cpu
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -108,20 +109,20 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
         #train the style classifier every 500 iterations
         if epoch % 300 == 299 or epoch == epochs-1:
             # set up the classification model
-            classifier = nn.Sequential(
-                nn.Linear(2048, 1024),
-                nn.SiLU(),
-                # nn.Dropout(0.5),
-                # nn.Linear(4096, 1024),
-                # nn.SiLU(),
-                nn.Linear(1024, 512),
-                nn.SiLU(),
-                # nn.Linear(512, 256),
-                # nn.SiLU(),
-                nn.Linear(512, 13),
-                # nn.ReLU(),
-            ).cuda()
-
+            # classifier = nn.Sequential(
+            #     nn.Linear(2048, 1024),
+            #     nn.SiLU(),
+            #     # nn.Dropout(0.5),
+            #     # nn.Linear(4096, 1024),
+            #     # nn.SiLU(),
+            #     nn.Linear(1024, 512),
+            #     nn.SiLU(),
+            #     # nn.Linear(512, 256),
+            #     # nn.SiLU(),
+            #     nn.Linear(512, 13),
+            #     # nn.ReLU(),
+            # ).cuda()
+            classifier = Classifier(2048, 13).cuda()
             classifier_criterion = nn.CrossEntropyLoss()
             classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
             total_loss = 0.0
