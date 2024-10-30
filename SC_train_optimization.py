@@ -111,6 +111,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
             classifier = nn.Sequential(
                 nn.Linear(2048, 1024),
                 nn.SiLU(),
+                # nn.Dropout(0.5),
                 # nn.Linear(4096, 1024),
                 # nn.SiLU(),
                 nn.Linear(1024, 512),
