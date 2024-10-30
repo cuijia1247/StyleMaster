@@ -23,7 +23,7 @@ def parameter_load():
     epochs = 5001 #best, perhaps3001
     batch_size_ = 64
     offset_bs = 512
-    base_lr = 0.005 #best
+    base_lr = 0.008 #best
     image_size = 64 #best
     # classfier_iteration = 150 #best
     classfier_iteration = 300  # best
