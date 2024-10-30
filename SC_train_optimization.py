@@ -20,12 +20,13 @@ from SscDataSet import SscDataset
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 1501 #best, perhaps3001
+    epochs = 5001 #best, perhaps3001
     batch_size_ = 64
     offset_bs = 512
-    base_lr = 0.008 #best
+    base_lr = 0.005 #best
     image_size = 64 #best
-    classfier_iteration = 150 #best
+    # classfier_iteration = 150 #best
+    classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     model_name = ''
     return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name
@@ -108,12 +109,14 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
         if epoch % 300 == 299 or epoch == epochs-1:
             # set up the classification model
             classifier = nn.Sequential(
-                nn.Linear(2048, 4096),
+                nn.Linear(2048, 1024),
                 nn.SiLU(),
-                nn.Linear(4096, 1024),
-                nn.SiLU(),
+                # nn.Linear(4096, 1024),
+                # nn.SiLU(),
                 nn.Linear(1024, 512),
                 nn.SiLU(),
+                # nn.Linear(512, 256),
+                # nn.SiLU(),
                 nn.Linear(512, 13),
                 # nn.ReLU(),
             ).cuda()
@@ -229,7 +232,7 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     #############################
-    classifier_activate_list = ['2048-4096-1024-512-13']
+    classifier_activate_list = ['2048-1024-512-256-13']
     # base_epochs_list = [100, 200, 300, 400]
     model_name = 'classifier_structure_optimal'
     #############################

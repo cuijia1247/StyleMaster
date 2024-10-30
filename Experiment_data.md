@@ -74,10 +74,10 @@ longger iteration is still useful
 
 | classifier_structures |best_accuracy|last_accuracy| information |
 |-----------------------|-|-|-|
-| 2048-4096-1024-512-13 |
-| 2048-1024-512-13      |
-| 2048-512-256-13       |
-| 2048-1024-512-256-13  |
+| 2048-4096-1024-512-13 |0.693277|0.638655|overfitting at 1000 epochs|
+| 2048-1024-512-13      |0.705882|0.619748|overfitting at 1400 epochs|
+| 2048-1024-512-256-13  |0.693277|0.607143|under-traind|
+|2048-1024-512-13 |
 
 
 
