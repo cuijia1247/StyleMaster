@@ -9,7 +9,8 @@ Thanks for the contribution of code repository list
 
 ## Installation
  * CUDA (optional)
- * Pytorch
+ * Pytorch=2.1.0
+ * python=3.8.19
 using the commands shown below to install the necessary packages:
 ```
 pip install -r requirements.txt
