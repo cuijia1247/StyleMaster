@@ -21,7 +21,7 @@ from ssc.classifier import Classifier
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 1500 #best, perhaps6001
+    epochs = 6000 #best, perhaps6001
     batch_size_ = 64
     offset_bs = 512
     base_lr = 0.008 #best
@@ -236,9 +236,9 @@ if __name__ == '__main__':
     dataSource = './data/Painting91/'
     # ssc_output = 2048
     #############################
-    ssc_output_list = [4096]
+    ssc_output_list = [2048]
     # base_epochs_list = [100, 200, 300, 400]
-    model_name = 'SSC_output_optimal'
+    model_name = 'one-time-with-optimal'
     #############################
     # begin to train.
     for ssc_output in ssc_output_list:
