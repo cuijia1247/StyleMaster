@@ -80,7 +80,14 @@ longger iteration is still useful
 |2048-1024-512-13 |0.707983|0.617647| hard to increase the accuracy                                                                             |
 |2048-1024-512-13 with dropout|0.707983|not finished| when epoch is larger, the classifier is untrained, maybe the adjustable training iteration will be better |
 
+8. the SSC output features 4096, 2048, 1024, 512
 
+| SSC output features |best_accuracy|last_accuracy| information |
+|-----------------------|-|-|-|
+|4096|
+|2048|
+|1024|
+|512|
 
 
 When the SSC loss is lower and lower, the cls accuracy is lower too.

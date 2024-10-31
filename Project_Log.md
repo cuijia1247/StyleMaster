@@ -18,3 +18,4 @@
 - [x] test classifier lr: 0.0001, 0.0005, 0.00001, 0.00005, 0.000001
 - [x] test activation function: ReLU, SiLU, SELU, Softsign
 - [x] test classifier structures
+- [ ] test the SSC output features 4096, 2048, 1024, 512

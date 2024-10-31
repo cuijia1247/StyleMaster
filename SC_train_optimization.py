@@ -21,7 +21,7 @@ from ssc.classifier import Classifier
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 5001 #best, perhaps3001
+    epochs = 1500 #best, perhaps6001
     batch_size_ = 64
     offset_bs = 512
     base_lr = 0.008 #best
@@ -45,6 +45,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
     offset_bs = offset_bs_
     base_lr = base_lr_
     image_size = image_size_
+    ssc_output = opt_param
     model_name_ = opt_model_name ####optimal
     # classifier_iteration_ = opt_param ####optimal
     # classifier_lr_ = opt_param ####optimal
@@ -54,9 +55,9 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
     logger.info('sub patch size = (%d, %d)', image_size, image_size)
     logger.info('classifier iteration is %d', classifier_iteration_)
     logger.info('classifier learning rate = %f', classifier_lr_)
-    logger.info('classifier structure = %s', opt_param)####optimal
+    logger.info('SSC output = %d', opt_param)####optimal
     logger.info('model name is %s', model_name_)
-    logger.info('SSC output is %d', ssc_output)
+    logger.info('SSC output = %d', ssc_output)
 
     #normalize and randomcrop input images
     transformT, transformT1, transformEvalT = get_byol_transforms(image_size, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
@@ -235,12 +236,12 @@ if __name__ == '__main__':
     dataSource = './data/Painting91/'
     ssc_output = 2048
     #############################
-    classifier_activate_list = ['2048-1024-512-256-13']
+    ssc_output_list = [4096, 2048, 1024, 512]
     # base_epochs_list = [100, 200, 300, 400]
-    model_name = 'classifier_structure_optimal'
+    model_name = 'SSC_output_optimal'
     #############################
     # begin to train.
-    for classifier_activate in classifier_activate_list:
+    for ssc_output in ssc_output_list:
         # setup logger for record the process data
         logger = logging.getLogger("my_logger")
         logger.setLevel(logging.DEBUG)
@@ -254,7 +255,7 @@ if __name__ == '__main__':
         filehandler = logging.FileHandler("./log/" + log_name)
         filehandler.setFormatter(formatter)
         logger.addHandler(filehandler)
-        SSCtrain(logger, save_iteration, model_path, current_time, classifier_activate, model_name, dataSource, ssc_output)
+        SSCtrain(logger, save_iteration, model_path, current_time, ssc_output, model_name, dataSource, ssc_output)
         logger.removeHandler(filehandler)
         logger.removeHandler(handler)
         # logging.shutdown()
