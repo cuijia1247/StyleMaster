@@ -75,7 +75,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
 
     lr = base_lr*batch_size/offset_bs
     #set up the SSC model
-    model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
+    model = SscReg(input_size=2048, output_size = ssc_output, backend='resnet50')
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(2048, ssc_output)
     resnet50 = resnet50.eval()
@@ -234,9 +234,9 @@ if __name__ == '__main__':
     save_iteration = 1001
     model_path = './model/'
     dataSource = './data/Painting91/'
-    ssc_output = 2048
+    # ssc_output = 2048
     #############################
-    ssc_output_list = [4096, 2048, 1024, 512]
+    ssc_output_list = [2048, 1024, 512, 256]
     # base_epochs_list = [100, 200, 300, 400]
     model_name = 'SSC_output_optimal'
     #############################
