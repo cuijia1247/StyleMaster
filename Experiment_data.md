@@ -87,7 +87,7 @@ longger iteration is still useful
 | 2048                |0.710084|0.626050|good for now|
 | 1024                |0.699580|0.642857|good for now|
 | 512                 |0.701681|0.623950|features are not enough for training|
-| 4096                |
+| 4096                |0.701681|0.640756|not obvious improvement|
 
 
 When the SSC loss is lower and lower, the cls accuracy is lower too.

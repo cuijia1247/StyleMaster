@@ -233,7 +233,7 @@ if __name__ == '__main__':
     save_iteration = 1001 #not used for now
     model_path = './model/'
     dataSource = './data/Painting91/'
-    ssc_output = 2048
+    ssc_output = 2048 #the best
     model_name = 'regular-train'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
