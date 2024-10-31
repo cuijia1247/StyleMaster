@@ -236,7 +236,7 @@ if __name__ == '__main__':
     dataSource = './data/Painting91/'
     # ssc_output = 2048
     #############################
-    ssc_output_list = [2048, 1024, 512, 256]
+    ssc_output_list = [4096]
     # base_epochs_list = [100, 200, 300, 400]
     model_name = 'SSC_output_optimal'
     #############################
