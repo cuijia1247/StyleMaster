@@ -89,6 +89,9 @@ longger iteration is still useful
 | 512                 |0.701681|0.623950|features are not enough for training|
 | 4096                |0.701681|0.640756|not obvious improvement|
 
+9. The last parameter optimization
+best accuracy = 0.707983
+
 
 When the SSC loss is lower and lower, the cls accuracy is lower too.
 The potential reason is the loss of SSC which is calculated on contents instead of style
