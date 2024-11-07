@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torchvision.transforms as tr
 from PIL import Image
 
-def criterion(x, y, lmbd = 5e-3, u = 1, v= 1, epsilon = 1e-3):
+def criterion(x, y, lmbd = 5e-3, u = 1, v= 1, epsilon = 1e-3): #the base loss computation
     bs = x.size(0)
     emb = x.size(1)
 
@@ -19,8 +19,8 @@ def criterion(x, y, lmbd = 5e-3, u = 1, v= 1, epsilon = 1e-3):
     crossCorMat = (xNorm.T@yNorm) / bs
     cross_loss = (crossCorMat*lmbd - torch.eye(emb, device=torch.device('cuda'))*lmbd).pow(2).sum()
     
-    # loss = u*var_loss + v*invar_loss + cross_loss
-    loss = u*var_loss + cross_loss
+    loss = u*var_loss + v*invar_loss + cross_loss
+    # loss = u*var_loss + cross_loss
 
     return loss
 
