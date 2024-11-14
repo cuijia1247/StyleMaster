@@ -232,10 +232,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
 if __name__ == '__main__':
     # save_iteration = 1001 #not used for now
     model_path = './model/'
-    dataSource = './data/Painting91/'
-    class_number = 13
+    # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
+    dataSource = './data/Pandora/'  # pandora dataset, classes = 12
+    class_number = 12
     ssc_output = 2048 #the best
-    model_name = 'pandora'
+    model_name = 'Pandora'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
