@@ -20,7 +20,7 @@ from ssc.classifier import Classifier
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 5001 #best, perhaps3001
+    epochs = 1801 #best, perhaps6001
     batch_size_ = 64
     offset_bs = 512
     base_lr = 0.008 #best
