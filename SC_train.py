@@ -103,11 +103,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-        if epoch % 50 == 0 or epoch == epochs - 1:
+        if epoch % 50 == 0 or epoch == epochs-1:
             logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
             # train the style classifier every 500 iterations
-        if epoch % 300 == 0 or epoch == epochs - 1:
+        if epoch % 300 == 0 and epoch != 0 or epoch == epochs-1:
             # set up the classification model
             # classifier = nn.Sequential(
             #     nn.Linear(2048, 1024),
