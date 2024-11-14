@@ -57,7 +57,7 @@ class SscDataset(Dataset):
         nameList = []
         for subFolder in range(classNum):
             label = subFolder + 1
-            newPath = dataPath + '/' + str(label) + '/'
+            newPath = dataPath + str(label) + '/'
             # for filename in tqdm.tqdm(os.listdir(newPath)):
             for filename in os.listdir(newPath):
                 imgPath = newPath + filename
@@ -65,6 +65,8 @@ class SscDataset(Dataset):
                 # img = Image.open(imgPath).convert('RGB')
                 img = cv2.imread(imgPath, cv2.IMREAD_COLOR)
                 # img = cv2.imread(imgPath)
+                # if filename == '2516.jpg':
+                #     print('ERROR')
                 img = cv2.resize(img, (256, 256))
                 imgO = img
                 imgO = self.transforms_original(imgO)
