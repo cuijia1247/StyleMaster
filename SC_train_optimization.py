@@ -153,7 +153,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
                     # val, idx = prediction.topk(1)
                     # idx = idx.t().squeeze()
                     # idx = idx.cpu().float()
-                    original_label = label
+                    # original_label = label
                     # label = label.cpu().float()-1
                     label = label - 1
                     label = Variable(label).cuda()
@@ -190,7 +190,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
                         # val, idx = prediction.topk(1)
                         # idx = idx.t().squeeze()
                         # idx = idx.cpu().float()
-                        original_label = label
+                        # original_label = label
                         # label = label.cpu().float()-1
                         label = label - 1
                         label = Variable(label).cuda()
@@ -218,7 +218,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_param, opt_mo
                     logger.info('Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i, test_correct,
                                 len(testset), test_accuracy)
             total_loss += np.mean(trainstyle_loss)
-            total_loss = total_loss / 50
+            # total_loss = total_loss / 50
             if epoch == epochs - 1:
                 lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-classifier-last.pth'
                 lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-base-last.pth'

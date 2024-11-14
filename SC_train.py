@@ -28,17 +28,17 @@ def parameter_load():
     # classfier_iteration = 150 #best
     classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
-    classifier_structure = '2048-1024-512-13 with dropout'
+    # classifier_structure = '2048-1024-512-13 with dropout'
     model_name = ''
-    return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, classifier_structure
+    return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name#, classifier_structure
 
-def SSCtrain(logger, save_iteration, model_path, current_time, opt_model_name, dataset, ssc_output):
+def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_output, class_number):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-    logger.debug('This is the training process')
+    logger.debug('THIS IS THE FORMAL TRAINING PROCESS')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.info('SSC parameter setting up...')
     # load all the parameters
-    epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_, classifier_structure_ = parameter_load()
+    epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_ = parameter_load()
     #the training parameters
     # the training parameters
     epochs = epochs_
@@ -54,7 +54,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_model_name, d
     logger.info('sub patch size = (%d, %d)', image_size, image_size)
     logger.info('classifier iteration is %d', classifier_iteration_)
     logger.info('classifier learning rate = %f', classifier_lr_)
-    logger.info('classifier structure = %s', classifier_structure_)  ####optimal
+    # logger.info('classifier structure = %s', classifier_structure_)  ####optimal
     logger.info('model name is %s', model_name_)
     logger.info('SSC output is %d', ssc_output)
 
@@ -119,15 +119,15 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_model_name, d
             #     nn.Linear(256, 13),
             #     # nn.ReLU(),
             # ).cuda()
-            classifier = Classifier(ssc_output, 13).cuda()
+            classifier = Classifier(ssc_output, class_number).cuda()
             classifier_criterion = nn.CrossEntropyLoss()
             classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
             total_loss = 0.0
             style_loss = torch.zeros(1).cuda()
-            logger.info('SSC classifier model is ready...')
+            # logger.info('SSC classifier model is ready...')
             # model.eval()
-            correct = 0.0
-            total_number = len(trainset)
+            # correct = 0.0
+            # total_number = len(trainset)
             for i in range(classifier_iteration_):
                 trainstyle_loss = []
                 total_correct = 0.0
@@ -148,7 +148,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_model_name, d
                     # val, idx = prediction.topk(1)
                     # idx = idx.t().squeeze()
                     # idx = idx.cpu().float()
-                    original_label = label
+                    # original_label = label
                     # label = label.cpu().float()-1
                     label = label - 1
                     label = Variable(label).cuda()
@@ -186,7 +186,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_model_name, d
                         # val, idx = prediction.topk(1)
                         # idx = idx.t().squeeze()
                         # idx = idx.cpu().float()
-                        original_label = label
+                        # original_label = label
                         # label = label.cpu().float()-1
                         label = label - 1
                         label = Variable(label).cuda()
@@ -218,7 +218,7 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_model_name, d
                         test_correct,
                         len(testset), test_accuracy)
             total_loss += np.mean(trainstyle_loss)
-            total_loss = total_loss / 50
+            # total_loss = total_loss / 50
             if epoch == epochs - 1:
                 lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-classifier-last.pth'
                 lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-base-last.pth'
@@ -230,11 +230,12 @@ def SSCtrain(logger, save_iteration, model_path, current_time, opt_model_name, d
 
 
 if __name__ == '__main__':
-    save_iteration = 1001 #not used for now
+    # save_iteration = 1001 #not used for now
     model_path = './model/'
     dataSource = './data/Painting91/'
+    class_number = 13
     ssc_output = 2048 #the best
-    model_name = 'regular-train'
+    model_name = 'pandora'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
@@ -248,7 +249,7 @@ if __name__ == '__main__':
     filehandler = logging.FileHandler("./log/" + log_name)
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
-    SSCtrain(logger, save_iteration, model_path, current_time, model_name, dataSource, ssc_output)
+    SSCtrain(logger, model_path, current_time, model_name, dataSource, ssc_output, class_number)
     logger.removeHandler(filehandler)
     logger.removeHandler(handler)
 
