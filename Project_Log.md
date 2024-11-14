@@ -22,5 +22,5 @@
 
 ## The second fine-tuning process
 
-- [ ] check out the distance computation approaches in the current SSC project
+- [x] check out the distance computation approaches in the current SSC project
 - [ ] try some different combination of distance computing ways

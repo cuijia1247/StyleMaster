@@ -12,15 +12,15 @@ def criterion(x, y, lmbd = 5e-3, u = 1, v= 1, epsilon = 1e-3): #the base loss co
     std_y = torch.sqrt(y.var(dim=0) + epsilon)
     var_loss = torch.mean(F.relu(1 - std_x)) + torch.mean(F.relu(1 - std_y))
 
-    invar_loss = F.mse_loss(x, y)
+    # invar_loss = F.mse_loss(x, y)
 
     xNorm = (x - x.mean(0)) / x.std(0)
     yNorm = (y - y.mean(0)) / y.std(0)
     crossCorMat = (xNorm.T@yNorm) / bs
     cross_loss = (crossCorMat*lmbd - torch.eye(emb, device=torch.device('cuda'))*lmbd).pow(2).sum()
     
-    loss = u*var_loss + v*invar_loss + cross_loss
-    # loss = u*var_loss + cross_loss
+    # loss = u*var_loss + v*invar_loss + cross_loss
+    loss = u*var_loss + cross_loss
 
     return loss
 
