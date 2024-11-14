@@ -225,8 +225,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                 torch.save(model, model_path + lt_base_name)
                 torch.save(classifier, model_path + lt_classifier_name)
                 logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
-        logger.info('The best accuracy is %f, and the last accuracy is %f', best_accuracy, last_accuracy)
-        logging.shutdown()
+    logger.info('The best accuracy is %f, and the last accuracy is %f', best_accuracy, last_accuracy)
+    logging.shutdown()
 
 
 if __name__ == '__main__':
