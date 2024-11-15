@@ -65,22 +65,26 @@ class SscDataset(Dataset):
                 # img = Image.open(imgPath).convert('RGB')
                 img = cv2.imread(imgPath, cv2.IMREAD_COLOR)
                 # img = cv2.imread(imgPath)
-                # if filename == '2516.jpg':
+                # if filename == 'impressionism_james-tissot-sarah-hears-and-laughs.jpg':
                 #     print('ERROR')
-                img = cv2.resize(img, (256, 256))
-                imgO = img
-                imgO = self.transforms_original(imgO)
-                originalfeautreLsit.append(imgO)
-                img1, img2 = self.transforms(img)
-                # img1 = img1.numpy().transpose(1,2,0)
-                # img2 = img2.numpy().transpose(1,2,0)
-
-                tempList = []
-                tempList.append(img1)
-                tempList.append(img2)
-                featureList.append(tempList)
-                labelList.append(label)
-                nameList.append(filename)
+                if img is not None:
+                    # print(imgPath)
+                    img = cv2.resize(img, (256, 256))
+                    imgO = img
+                    imgO = self.transforms_original(imgO)
+                    originalfeautreLsit.append(imgO)
+                    img1, img2 = self.transforms(img)
+                    # img1 = img1.numpy().transpose(1,2,0)
+                    # img2 = img2.numpy().transpose(1,2,0)
+                    tempList = []
+                    tempList.append(img1)
+                    tempList.append(img2)
+                    featureList.append(tempList)
+                    labelList.append(label)
+                    nameList.append(filename)
+                else:
+                    print('The {} is removed'.format(imgPath))
+                    os.remove(imgPath)
         return featureList, labelList, nameList, originalfeautreLsit
 
     def __getitem__(self, i):
