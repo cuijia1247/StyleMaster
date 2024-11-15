@@ -237,7 +237,7 @@ if __name__ == '__main__':
     # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
     dataSource = './data/WikiArt3/'  # pandora dataset, classes = 15
     class_number = 15
-    ssc_output = 2048 #the best
+    ssc_output = 512 #the best
     model_name = 'WikiArt3'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
