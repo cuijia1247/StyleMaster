@@ -25,8 +25,8 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 150 #best
-    # classfier_iteration = 300  # best
+    # classfier_iteration = 150 #best
+    classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     model_name = ''
@@ -74,7 +74,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     lr = base_lr*batch_size/offset_bs
     #set up the SSC model
     # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
-    model = SscReg(input_size=2048, output_size=512, backend='resnet50')
+    model = SscReg(input_size=2048, output_size=2048, backend='resnet50')
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(2048, ssc_output)
     resnet50 = resnet50.eval()
@@ -235,10 +235,11 @@ if __name__ == '__main__':
     model_path = './model/'
     # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
     # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
-    dataSource = './data/WikiArt3/'  # pandora dataset, classes = 15
-    class_number = 15
-    ssc_output = 512 #the best
-    model_name = 'WikiArt3'
+    # dataSource = './data/WikiArt3/'  # pandora dataset, classes = 15
+    dataSource = './data/Arch/'  # pandora dataset, classes = 25
+    class_number = 25
+    ssc_output = 2048 #the best
+    model_name = 'Arch'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
