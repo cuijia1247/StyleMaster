@@ -25,8 +25,8 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    # classfier_iteration = 150 #best
-    classfier_iteration = 300  # best
+    classfier_iteration = 150 #best
+    # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     model_name = ''
