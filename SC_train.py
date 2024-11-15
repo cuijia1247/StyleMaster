@@ -73,7 +73,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
 
     lr = base_lr*batch_size/offset_bs
     #set up the SSC model
-    model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
+    # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
+    model = SscReg(input_size=2048, output_size=512, backend='resnet50')
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(2048, ssc_output)
     resnet50 = resnet50.eval()
@@ -237,7 +238,7 @@ if __name__ == '__main__':
     dataSource = './data/WikiArt3/'  # pandora dataset, classes = 15
     class_number = 15
     ssc_output = 2048 #the best
-    model_name = 'Pandora'
+    model_name = 'WikiArt3'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
