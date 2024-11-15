@@ -233,8 +233,9 @@ if __name__ == '__main__':
     # save_iteration = 1001 #not used for now
     model_path = './model/'
     # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
-    dataSource = './data/Pandora/'  # pandora dataset, classes = 12
-    class_number = 12
+    # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
+    dataSource = './data/WikiArt3/'  # pandora dataset, classes = 15
+    class_number = 15
     ssc_output = 2048 #the best
     model_name = 'Pandora'
     #setup logger for record the process data
