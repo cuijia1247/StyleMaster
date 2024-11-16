@@ -236,10 +236,11 @@ if __name__ == '__main__':
     # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
     # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
     # dataSource = './data/WikiArt3/'  # pandora dataset, classes = 15
-    dataSource = './data/Arch/'  # pandora dataset, classes = 25
-    class_number = 25
+    # dataSource = './data/Arch/'  # pandora dataset, classes = 25
+    dataSource = './data/FashionStyle14/'  # pandora dataset, classes = 14
+    class_number = 14
     ssc_output = 2048 #the best
-    model_name = 'Arch'
+    model_name = 'FashionStyle14'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
