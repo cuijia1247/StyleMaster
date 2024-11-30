@@ -234,13 +234,13 @@ if __name__ == '__main__':
     # save_iteration = 1001 #not used for now
     model_path = './model/'
     # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
-    # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
-    # dataSource = './data/WikiArt3/'  # pandora dataset, classes = 15
-    # dataSource = './data/Arch/'  # pandora dataset, classes = 25
-    dataSource = './data/FashionStyle14/'  # pandora dataset, classes = 14
-    class_number = 14
+    dataSource = './data/Pandora/'  # pandora dataset, classes = 12
+    # dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
+    # dataSource = './data/Arch/'  # Arch dataset, classes = 25
+    # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
+    class_number = 12
     ssc_output = 2048 #the best
-    model_name = 'FashionStyle14'
+    model_name = 'Pandora'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
