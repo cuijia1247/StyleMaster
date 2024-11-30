@@ -3,6 +3,7 @@ numpy==1.24.3
 opencv_python==4.10.0.84
 Pillow==10.4.0
 scipy==1.14.1
-torch==2.1.0
-torchvision==0.16.0
+#torch==2.1.0
+#torchvision==0.16.0
+#conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=12.1 -c pytorch -c nvidia
 tqdm==4.66.4

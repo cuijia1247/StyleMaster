@@ -4,7 +4,8 @@
 # the features are extracted as a dict form (name: feature) by pretrained resnet50 model
 import numpy as np
 import os
-os.environ['TORCH_HOME'] = '../../pretrainModels/resnet50'  #指定预训练模型下载地址
+# os.environ['TORCH_HOME'] = '../../pretrainModels/resnet50'  #指定预训练模型下载地址
+os.environ['TORCH_HOME'] = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainModels/resnet50'
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 import torch
 import torch.nn as nn
