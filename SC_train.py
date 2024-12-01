@@ -20,13 +20,13 @@ from ssc.classifier import Classifier
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 1201 #best, perhaps6001
+    epochs = 200 #best, perhaps6001
     batch_size_ = 64
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    # classfier_iteration = 150 #best
-    classfier_iteration = 300  # best
+    classfier_iteration = 150 #best
+    # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     model_name = ''
@@ -104,11 +104,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-        if epoch % 50 == 0 or epoch == epochs-1:
+        if epoch % 10 == 0 or epoch == epochs-1:
             logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
             # train the style classifier every 500 iterations
-        if epoch % 100 == 0 and epoch != 0 or epoch == epochs-1:
+        if epoch % 20 == 0 and epoch != 0 or epoch == epochs-1:
             # set up the classification model
             # classifier = nn.Sequential(
             #     nn.Linear(2048, 1024),
