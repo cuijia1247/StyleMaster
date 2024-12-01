@@ -25,7 +25,7 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 150 #best
+    classfier_iteration = 30 #best
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
@@ -165,11 +165,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                 # total_loss += style_loss
                 trainstyle_loss.append(style_loss.item())
                 # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                if i % 30 == 29:
+                if i % 5 == 4:
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                 len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 30 == 29:
+                if i % 5 == 4:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
@@ -234,13 +234,13 @@ if __name__ == '__main__':
     # save_iteration = 1001 #not used for now
     model_path = './model/'
     # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
-    dataSource = './data/Pandora/'  # pandora dataset, classes = 12
-    # dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
+    # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
+    dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
     # dataSource = './data/Arch/'  # Arch dataset, classes = 25
     # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
-    class_number = 12
+    class_number = 15
     ssc_output = 2048 #the best
-    model_name = 'Pandora'
+    model_name = 'WikiArt3'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
