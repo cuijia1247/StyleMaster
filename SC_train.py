@@ -25,7 +25,7 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 30 #best
+    classfier_iteration = 100 #best
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
@@ -108,7 +108,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
             logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
             # train the style classifier every 500 iterations
-        if epoch % 20 == 0 and epoch != 0 or epoch == epochs-1:
+        if epoch % 25 == 0 and epoch != 0 or epoch == epochs-1:
             # set up the classification model
             # classifier = nn.Sequential(
             #     nn.Linear(2048, 1024),
@@ -165,11 +165,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                 # total_loss += style_loss
                 trainstyle_loss.append(style_loss.item())
                 # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                if i % 5 == 4:
+                if i % 10 == 9:
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                 len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 5 == 4:
+                if i % 25 == 24:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
