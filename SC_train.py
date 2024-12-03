@@ -235,12 +235,13 @@ if __name__ == '__main__':
     model_path = './model/'
     # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
     # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
-    dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
+    # dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
     # dataSource = './data/Arch/'  # Arch dataset, classes = 25
     # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
-    class_number = 15
+    dataSource = './data/artbench/' #artbench dataset, classes = 10
+    class_number = 10
     ssc_output = 2048 #the best
-    model_name = 'WikiArt3'
+    model_name = 'artbench'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
