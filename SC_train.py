@@ -184,6 +184,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                         test2 = res_view1 - img2
                         test = test1 + test2
                         prediction = classifier(test)
+
                         # val, idx = prediction.topk(1)
                         # idx = idx.t().squeeze()
                         # idx = idx.cpu().float()
