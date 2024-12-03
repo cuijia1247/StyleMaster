@@ -169,7 +169,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                 len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 25 == 24:
+                if i % 10 == 9:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
