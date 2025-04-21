@@ -238,10 +238,11 @@ if __name__ == '__main__':
     # dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
     # dataSource = './data/Arch/'  # Arch dataset, classes = 25
     # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
-    dataSource = './data/artbench/' #artbench dataset, classes = 10
+    # dataSource = './data/artbench/' #artbench dataset, classes = 10
+    dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
     class_number = 10
     ssc_output = 2048 #the best
-    model_name = 'artbench'
+    model_name = 'webstyle'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
