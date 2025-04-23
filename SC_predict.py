@@ -53,12 +53,13 @@ def SSC_predict(model_path, dataSource, class_number, output_path):
         for file in files:
             img = cv2.imread(os.path.join(root, file), cv2.IMREAD_COLOR)
             img = cv2.resize(img, (256, 256))
-            img = transforms_original(img).to(device)
             img1, img2 = transform(img)
             img1 = img1.unsqueeze(0).to(device)
             img2 = img2.unsqueeze(0).to(device)
             view1 = base_model(img1)
             view2 = base_model(img2)
+            img = transforms_original(img).to(device)
+            img = img.unsqueeze(0)
             res_view = resnet50(img)
             test1 = view1 - res_view
             test2 = view2 - res_view
