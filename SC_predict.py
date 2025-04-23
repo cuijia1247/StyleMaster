@@ -40,13 +40,21 @@ def SSC_predict(model_path, dataSource, class_number, output_path):
     resnet50 = resnet50.to(device)
     transformT, transformT1, transformEvalT = get_byol_transforms(64, (0.485, 0.456, 0.406),
                                                                   (0.229, 0.224, 0.225))
+    norm_mean = [0.485, 0.456, 0.406]
+    norm_std = [0.229, 0.224, 0.225]
+    transforms_original = transforms.Compose([
+
+        transforms.ToTensor(),
+        transforms.Resize((224, 224)),
+        transforms.Normalize(norm_mean, norm_std),
+    ])
     transform = MultiViewDataInjector([transformT, transformT1])
     for root, dirs, files in os.walk(dataSource):
         for file in files:
             img = cv2.imread(os.path.join(root, file), cv2.IMREAD_COLOR)
             img = cv2.resize(img, (256, 256))
+            img = transforms_original(img).to(device)
             img1, img2 = transform(img)
-            img = img.unsqueeze(0).to(device)
             img1 = img1.unsqueeze(0).to(device)
             img2 = img2.unsqueeze(0).to(device)
             view1 = base_model(img1)
