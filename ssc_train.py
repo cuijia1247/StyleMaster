@@ -1,19 +1,17 @@
+# ssc new training code by 20250425
 # Author: cuijia1247
 # Date: 2024-7-19
 # version: 1.0
-# The codes do not finished yet by 20250425
 import logging
 import time
 import torch
 from torch import nn
 import torch.optim as optim
 import torchvision.models as models
-import torchvision.datasets as datasets
 from torch.autograd import Variable
 import numpy as np
 from ssc.Sscreg import SscReg
 from ssc.utils import criterion, get_byol_transforms, MultiViewDataInjector
-from tqdm import tqdm
 from SscDataSet import SscDataset
 from ssc.classifier import Classifier
 
@@ -40,7 +38,6 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     logger.info('SSC parameter setting up...')
     # load all the parameters
     epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_ = parameter_load()
-    #the training parameters
     # the training parameters
     epochs = epochs_
     batch_size = batch_size_
@@ -232,6 +229,14 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
 
 
 if __name__ == '__main__':
+    # save_iteration = 1001 #not used for now
+    model_path = './model/'
+    # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
+    # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
+    # dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
+    # dataSource = './data/Arch/'  # Arch dataset, classes = 25
+    # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
+    # dataSource = './data/artbench/' #artbench dataset, classes = 10
     dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
     class_number = 10
     ssc_output = 2048 #the best

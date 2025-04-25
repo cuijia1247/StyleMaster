@@ -19,6 +19,10 @@
 - [x] test activation function: ReLU, SiLU, SELU, Softsign
 - [x] test classifier structures
 - [x] test the SSC output features 4096, 2048, 1024, 512
+- [ ] test all codes for review
+- [ ] update all codes for better performance and readability
+- [ ] add transformer as new baseline
+- [ ] design ablation study experiments
 
 ## The second fine-tuning process
 
