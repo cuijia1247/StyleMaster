@@ -26,7 +26,7 @@ class SscDataset(Dataset):
         :param resize_height: 为None时，不缩放
         :param resize_width: 为None时，不缩放
         """
-        dataPath = dataSource + dataTyep + '/'
+        dataPath = dataSource + dataTyep + '/' #manual connect the path, the '/' is necessary
         for root, dirs, files in os.walk(dataPath):
             # print('root={}'.format(root))
             # print('dirs={}'.format(dirs))

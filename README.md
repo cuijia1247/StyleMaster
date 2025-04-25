@@ -15,6 +15,15 @@ using the commands shown below to install the necessary packages:
 ```
 pip install -r requirements.txt
 ```
+## Dataset setup
+Dataset - Images #images in format of PNG or JPG
+        - Labels #labels are stored in train.txt and test.txt, the detailed info shown as follow
+                 #labels are represented as one-hot vector way
+        - subImages #the folder for train and test
+            - 1, 2, 3, ... #every class in a single sub-folder
+The demo dataset can be found in the following folder
+'./data/DemoData/'
+
 
 ## Model
 ```python
