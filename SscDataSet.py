@@ -26,29 +26,24 @@ class SscDataset(Dataset):
         :param resize_height: 为None时，不缩放
         :param resize_width: 为None时，不缩放
         """
+        classNum = -999
         dataPath = dataSource + dataTyep + '/' #manual connect the path, the '/' is necessary
-        for root, dirs, files in os.walk(dataPath):
-            # print('root={}'.format(root))
-            # print('dirs={}'.format(dirs))
-            # print('files={}'.format(files))
+        for root, dirs, files in os.walk(dataPath): #get class number
             classNum = dirs.__len__()
             break
         norm_mean = [0.485, 0.456, 0.406]
         norm_std = [0.229, 0.224, 0.225]
-        self.transforms_original = transforms_o.Compose([
-
+        self.transforms_original = transforms_o.Compose([ #tranformer for whole image
             transforms_o.ToTensor(),
             transforms_o.Resize((224, 224)),
             transforms_o.Normalize(norm_mean, norm_std),
         ])
-        self.transforms = transform
+        self.transforms = transform #transformer for image sub regions
 
         self.features, self.labels, self.names, self.originalF = self.getFeature(dataPath, classNum)
         self.len = self.__len__()
         self.resize_height = resize_height
         self.resize_width = resize_width
-        # self.transforms = transforms
-        # self.multiFeatures = self.transforms(self.features)
 
     def getFeature(self, dataPath, classNum):
         featureList = []
