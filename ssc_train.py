@@ -1,4 +1,4 @@
-# ssc new training code by 20250425
+# ssc new training code after 20250425
 # Author: cuijia1247
 # Date: 2024-7-19
 # version: 1.0
@@ -94,7 +94,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     model = model.to(device)
     resnet50 = resnet50.to(device)
     params = model.parameters()
-    optimizer = optim.SGD( params, lr=lr, weight_decay=1.5e-6)
+    optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
     logger.info('SSC model is ready...')
 
 
@@ -122,7 +122,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
             # train the style classifier every 500 iterations
         if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
-            classifier = Classifier(ssc_output, class_number).cuda()
+            classifier = Classifier(ssc_output_, class_number).cuda()
             classifier_criterion = nn.CrossEntropyLoss()
             classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
             total_loss = 0.0
@@ -141,11 +141,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     view1 = view1.to(device).detach()
                     view2 = view2.to(device).detach()
                     original = original.to(device)
-                    res_view1 = resnet50(original)
+                    backbone_view = resnet50(original)
                     img1 = model(view1)  # only use view 1
                     img2 = model(view2)
-                    test1 = res_view1 - img1
-                    test2 = res_view1 - img2
+                    test1 = backbone_view - img1
+                    test2 = backbone_view - img2
                     test = test1 + test2
                     prediction = classifier(test)
                     # val, idx = prediction.topk(1)
@@ -179,11 +179,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
                         original = original.to(device)
-                        res_view1 = resnet50(original)
+                        backbone_view = resnet50(original)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
-                        test1 = res_view1 - img1
-                        test2 = res_view1 - img2
+                        test1 = backbone_view - img1
+                        test2 = backbone_view - img2
                         test = test1 + test2
                         prediction = classifier(test)
                         # val, idx = prediction.topk(1)
