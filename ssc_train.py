@@ -20,6 +20,10 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 def parameter_load():
     epochs = 1000 #best, perhaps6001
+    backbone = 'resnet50'
+    ssc_backend = 'resnet50'
+    ssc_input = 2048
+    ssc_output = 2048
     batch_size_ = 64
     batch_size_sample = 'None'
     offset_bs = 512
@@ -31,15 +35,17 @@ def parameter_load():
     # classifier_structure = '2048-1024-512-13 with dropout'
     classifier_training_gap = 25
     model_name = ''
-    return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample, classifier_training_gap#, classifier_structure
+    return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
+            classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output)#, classifier_structure
 
-def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_output, class_number):
+def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_number):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.debug('THIS IS THE FORMAL TRAINING PROCESS')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.info('SSC parameter setting up...')
     # load all the parameters
-    epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_, batch_size_sample_, classifier_training_gap_= parameter_load()
+    (epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_, batch_size_sample_,
+     classifier_training_gap_, backbone_, ssc_backend_, ssc_input_, ssc_output_)= parameter_load()
     # the training parameters
     epochs = epochs_
     batch_size = batch_size_
@@ -49,8 +55,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     model_name_ = opt_model_name  ####optimal
     # display all the necessary parameters & record them in logger
     logger.info('dataset = %s', dataset)
+    logger.info('backbone is %s', backbone_)
     logger.info('epochs = %d', epochs)
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
+    logger.info('SSC backend = %s', ssc_backend_)
+    logger.info('SSC input = %d', ssc_input_)
+    logger.info('SSC output = %d', ssc_output_)
     logger.info('SSC learning rate = %f', base_lr)
     logger.info('sub patch size = (%d, %d)', image_size, image_size)
     logger.info('sub pathc sample is %s', batch_size_sample_)
@@ -59,7 +69,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     logger.info('classifier learning rate = %f', classifier_lr_)
     # logger.info('classifier structure = %s', classifier_structure_)  ####optimal
     logger.info('model name is %s', model_name_)
-    logger.info('SSC output is %d', ssc_output)
+    # logger.info('SSC output is %d', ssc_output)
 
     #normalize and randomcrop input images
     transformT, transformT1, transformEvalT = get_byol_transforms(image_size, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
@@ -77,9 +87,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     lr = base_lr*batch_size/offset_bs
     #set up the SSC model
     # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
-    model = SscReg(input_size=2048, output_size=2048, backend='resnet50')
+    model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
     resnet50 = models.resnet50(pretrained=True)
-    resnet50.fc = nn.Linear(2048, ssc_output)
+    resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
     resnet50 = resnet50.eval()
     model = model.to(device)
     resnet50 = resnet50.to(device)
@@ -233,7 +243,7 @@ if __name__ == '__main__':
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
     class_number = 10
-    ssc_output = 2048 #the best
+    # ssc_output = 2048 #the best
     model_name = 'webstyle'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
@@ -248,7 +258,7 @@ if __name__ == '__main__':
     filehandler = logging.FileHandler("./log/" + log_name)
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
-    SSCtrain(logger, model_path, current_time, model_name, dataSource, ssc_output, class_number)
+    SSCtrain(logger, model_path, current_time, model_name, dataSource, class_number)
     logger.removeHandler(filehandler)
     logger.removeHandler(handler)
 
