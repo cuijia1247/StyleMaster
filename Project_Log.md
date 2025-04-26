@@ -23,6 +23,7 @@
 - [ ] update all codes for better performance and readability
 - [ ] add transformer as new baseline
 - [ ] design ablation study experiments
+- [ ] record more info in the logger for better model tracing
 
 ## The second fine-tuning process
 
