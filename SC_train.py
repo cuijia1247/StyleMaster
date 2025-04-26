@@ -1,4 +1,5 @@
-# Author: cuijia1247 THIS IS THE OLD VERSION BEFORE 202504
+# DO NOT USE IT NOW. THIS IS THE OLD VERSION BEFORE 202504
+# Author: cuijia1247
 # Date: 2024-7-19
 # version: 1.0
 import logging
