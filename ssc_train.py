@@ -21,6 +21,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 def parameter_load():
     epochs = 1000 #best, perhaps6001
     batch_size_ = 64
+    batch_size_sample = 'None'
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
@@ -28,8 +29,9 @@ def parameter_load():
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
+    classifier_training_gap = 25
     model_name = ''
-    return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name#, classifier_structure
+    return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample, classifier_training_gap#, classifier_structure
 
 def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_output, class_number):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -37,7 +39,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.info('SSC parameter setting up...')
     # load all the parameters
-    epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_ = parameter_load()
+    epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_, batch_size_sample_, classifier_training_gap_= parameter_load()
     # the training parameters
     epochs = epochs_
     batch_size = batch_size_
@@ -51,6 +53,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
     logger.info('SSC learning rate = %f', base_lr)
     logger.info('sub patch size = (%d, %d)', image_size, image_size)
+    logger.info('sub pathc sample is %s', batch_size_sample_)
+    logger.info('classifier training gap = %d', classifier_training_gap_)
     logger.info('classifier iteration is %d', classifier_iteration_)
     logger.info('classifier learning rate = %f', classifier_lr_)
     # logger.info('classifier structure = %s', classifier_structure_)  ####optimal
@@ -107,18 +111,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
             logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
             # train the style classifier every 500 iterations
-        if epoch % 25 == 0 and epoch != 0 or epoch == epochs-1:
-            # set up the classification model
-            # classifier = nn.Sequential(
-            #     nn.Linear(2048, 1024),
-            #     nn.ReLU(),
-            #     # nn.Linear(4096, 1024),
-            #     # nn.ReLU(),
-            #     nn.Linear(1024, 256),
-            #     nn.ReLU(),
-            #     nn.Linear(256, 13),
-            #     # nn.ReLU(),
-            # ).cuda()
+        if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
             classifier = Classifier(ssc_output, class_number).cuda()
             classifier_criterion = nn.CrossEntropyLoss()
             classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
