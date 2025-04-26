@@ -55,7 +55,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     model_name_ = opt_model_name  ####optimal
     # display all the necessary parameters & record them in logger
     logger.info('dataset = %s', dataset)
-    logger.info('backbone is %s', backbone_)
+    logger.info('backbone is %s', backbone_) # for now backbone == backend
     logger.info('epochs = %d', epochs)
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
     logger.info('SSC backend = %s', ssc_backend_)
