@@ -25,6 +25,7 @@
 - [ ] design ablation study experiments
 - [x] record more info in the logger for better model tracing
 - [x] unzip all datasets in this project (Painting91, Pandora7k, Wikiart3)
+- [ ] unzip all datasets in this project (Arch, FashionStyle14, AVA)
 - [ ] add simCLR code in this project
 - [ ] run test on all datasets
 
