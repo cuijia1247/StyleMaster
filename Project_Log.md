@@ -19,17 +19,18 @@
 - [x] test activation function: ReLU, SiLU, SELU, Softsign
 - [x] test classifier structures
 - [x] test the SSC output features 4096, 2048, 1024, 512
-- [ ] test all codes for review
+- [x] test all codes for review
 - [x] update all codes for better performance and readability
-- [ ] add transformer as new baseline
-- [ ] design ablation study experiments
 - [x] record more info in the logger for better model tracing
 - [x] unzip all datasets in this project (Painting91, Pandora7k, Wikiart3)
-- [ ] unzip all datasets in this project (Arch, FashionStyle14, AVA)
-- [ ] add simCLR code in this project
-- [ ] run test on all datasets
+- [x] unzip all datasets in this project (Arch, FashionStyle14, AVA)
+
 
 ## The second fine-tuning process
 
+- [ ] add simCLR code in this project
+- [ ] run test on all datasets
 - [x] check out the distance computation approaches in the current SSC project
 - [ ] try some different combination of distance computing ways
+- [ ] add transformer as new baseline
+- [ ] design ablation study experiments
