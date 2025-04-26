@@ -20,10 +20,13 @@
 - [x] test classifier structures
 - [x] test the SSC output features 4096, 2048, 1024, 512
 - [ ] test all codes for review
-- [ ] update all codes for better performance and readability
+- [x] update all codes for better performance and readability
 - [ ] add transformer as new baseline
 - [ ] design ablation study experiments
 - [x] record more info in the logger for better model tracing
+- [ ] unzip all datasets in this project
+- [ ] add simCLR code in this project
+- [ ] run test on all datasets
 
 ## The second fine-tuning process
 
