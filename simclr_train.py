@@ -63,7 +63,7 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
     # logger.info('SSC backend = %s', ssc_backend_)
     # logger.info('SSC input = %d', ssc_input_)
     # logger.info('SSC output = %d', ssc_output_)
-    logger.info('SSC learning rate = %f', base_lr)
+    logger.info('simclr learning rate = %f', base_lr)
     # logger.info('sub patch size = (%d, %d)', image_size, image_size)
     # logger.info('sub pathc sample is %s', batch_size_sample_)
     logger.info('classifier training gap = %d', classifier_training_gap_)
@@ -196,19 +196,17 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                 len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 10 == 9:
+                if i % 50 == 49:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
                         correct_ = 0.0
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
-                        original = original.to(device)
-                        backbone_view = resnet50(original)
-                        img1 = model(view1)  # only use view 1
-                        img2 = model(view2)
-                        test1 = backbone_view - img1
-                        test2 = backbone_view - img2
+                        data_dict = model.forward(view1.to(device, non_blocking=True),
+                                                  view2.to(device, non_blocking=True))
+                        test1 = data_dict['z1']  # only use view 1
+                        test2 = data_dict['z2']
                         test = test1 + test2
                         prediction = classifier(test)
                         # val, idx = prediction.topk(1)
