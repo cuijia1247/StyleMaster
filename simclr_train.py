@@ -165,8 +165,8 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                     correct = 0.0
                     view1 = view1.to(device).detach()
                     view2 = view2.to(device).detach()
-                    original = original.to(device)
-                    backbone_view = resnet50(original)
+                    # original = original.to(device)
+                    # backbone_view = resnet50(original)
                     img1 = model(view1)  # only use view 1
                     img2 = model(view2)
                     test1 = backbone_view - img1
@@ -258,7 +258,6 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
 
 
 if __name__ == '__main__':
-    # save_iteration = 1001 #not used for now
     model_path = './model/'
     # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
     # dataSource = './data/Pandora/'  # pandora dataset, classes = 12

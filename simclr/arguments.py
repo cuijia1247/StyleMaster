@@ -78,8 +78,8 @@ def get_args():
     # print(f'creating file {args.log_dir}')
     # os.makedirs(args.ckpt_dir, exist_ok=True)
 
-    shutil.copy2(args.config_file, args.log_dir)
-    set_deterministic(args.seed)
+    # shutil.copy2(args.config_file, args.log_dir)
+    # set_deterministic(args.seed)
 
 
     vars(args)['aug_kwargs'] = {
