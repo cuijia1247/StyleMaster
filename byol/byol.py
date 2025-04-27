@@ -6,11 +6,13 @@ import torch.nn.functional as F
 from torchvision import transforms 
 from math import pi, cos 
 from collections import OrderedDict
+from torchvision.models import resnet50
+
 HPS = dict(
     max_steps=int(1000. * 1281167 / 4096), # 1000 epochs * 1281167 samples / batch size = 100 epochs * N of step/epoch
     # = total_epochs * len(dataloader) 
     mlp_hidden_size=4096,
-    projection_size=256,
+    projection_size=2048,
     base_target_ema=4e-3,
     optimizer_config=dict(
         optimizer_name='lars', 
@@ -60,11 +62,11 @@ class MLP(nn.Module):
         return x
 
 class BYOL(nn.Module):
-    def __init__(self, backbone):
+    def __init__(self, backbone=resnet50()):
         super().__init__()
 
         self.backbone = backbone
-        self.projector = MLP(backbone.output_dim)
+        self.projector = MLP(backbone.fc.out_features)
         self.online_encoder = nn.Sequential(
             self.backbone,
             self.projector
@@ -72,7 +74,7 @@ class BYOL(nn.Module):
 
         self.target_encoder = copy.deepcopy(self.online_encoder)
         self.online_predictor = MLP(HPS['projection_size'])
-        raise NotImplementedError('Please put update_moving_average to training')
+        # raise NotImplementedError('Please put update_moving_average to training')
 
     def target_ema(self, k, K, base_ema=HPS['base_target_ema']):
         # tau_base = 0.996 
@@ -101,7 +103,7 @@ class BYOL(nn.Module):
             z2_t = f_t(x2)
         
         L = D(p1_o, z2_t) / 2 + D(p2_o, z1_t) / 2 
-        return {'loss': L}
+        return {'loss': L, 'z1':z1_t, 'z2':z2_t}
 
     
 

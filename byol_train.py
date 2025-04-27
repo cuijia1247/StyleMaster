@@ -144,7 +144,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
             # loss.backward()
             # optimizer.step()
         if epoch % 10 == 0 or epoch == epochs-1:
-            logger.info('The epoch is %d, simclr train loss is %f', epoch, np.mean(train_loss))
+            logger.info('The epoch is %d, byol train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
             # train the style classifier every 500 iterations
         if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
