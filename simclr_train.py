@@ -27,7 +27,7 @@ def parameter_load():
     ssc_input = 2048
     ssc_output = 2048
     batch_size_ = 64
-    batch_size_sample = 'None'
+    # batch_size_sample = 'None'
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
@@ -37,16 +37,16 @@ def parameter_load():
     # classifier_structure = '2048-1024-512-13 with dropout'
     classifier_training_gap = 50
     model_name = ''
-    return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
+    return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output)#, classifier_structure
 
-def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_number):
+def simclr_train(logger, model_path, current_time, opt_model_name, dataset, class_number):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.debug('THIS IS THE FORMAL TRAINING PROCESS')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.info('simlar parameter setting up...')
     # load all the parameters
-    (epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_, batch_size_sample_,
+    (epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_,
      classifier_training_gap_, backbone_, ssc_backend_, ssc_input_, ssc_output_)= parameter_load()
     # the training parameters
     epochs = epochs_
@@ -80,7 +80,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     dataSource = dataset
     trainData = 'train'
     trainset = SscDataset(dataSource, trainData, transform=MultiViewDataInjector([transformT, transformT1]))
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=False)
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
@@ -266,9 +266,9 @@ if __name__ == '__main__':
     # dataSource = './data/Arch/'  # Arch dataset, classes = 25
     # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
-    dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
-    class_number = 10
-    model_name = 'simclr_webstyle'
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91'  # artbench dataset, classes = 10
+    class_number = 13
+    model_name = 'simclr_painting91'
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
@@ -281,7 +281,7 @@ if __name__ == '__main__':
     filehandler = logging.FileHandler("./log/" + log_name)
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
-    SSCtrain(logger, model_path, current_time, model_name, dataSource, class_number)
+    simclr_train(logger, model_path, current_time, model_name, dataSource, class_number)
     logger.removeHandler(filehandler)
     logger.removeHandler(handler)
 

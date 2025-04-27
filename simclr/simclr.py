@@ -47,7 +47,7 @@ class SimCLR(nn.Module):
         super().__init__()
         
         self.backbone = backbone
-        self.projector = projection_MLP(backbone.output_dim)
+        self.projector = projection_MLP(backbone.fc.out_features)
         self.encoder = nn.Sequential(
             self.backbone,
             self.projector
