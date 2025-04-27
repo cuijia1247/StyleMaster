@@ -35,7 +35,7 @@ def parameter_load():
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
-    classifier_training_gap = 30
+    classifier_training_gap = 25
     model_name = ''
     return (epochs, batch_size_, base_lr, image_size, classfier_iteration, classifier_lr, model_name,
             classifier_training_gap, ssc_input, ssc_output)#, classifier_structure
