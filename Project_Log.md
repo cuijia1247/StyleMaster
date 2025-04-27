@@ -28,7 +28,9 @@
 
 ## The second fine-tuning process
 
-- [ ] add simCLR code in this project
+- [x] add simCLR code in this project
+- [x] add byol code in this project
+- [ ] add simsiam code in this project
 - [ ] run test on all datasets
 - [x] check out the distance computation approaches in the current SSC project
 - [ ] try some different combination of distance computing ways
