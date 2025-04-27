@@ -138,12 +138,12 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
             # fx = model(view1)
             # fx1 = model(view2)
             # loss = criterion(fx, fx1)
-            # train_loss.append(loss.item())
+            train_loss.append(loss.item())
             # optimizer.zero_grad()
             # loss.backward()
             # optimizer.step()
         if epoch % 10 == 0 or epoch == epochs-1:
-            logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
+            logger.info('The epoch is %d, simclr train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
             # train the style classifier every 500 iterations
         if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
@@ -152,6 +152,7 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
             classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
             total_loss = 0.0
             style_loss = torch.zeros(1).cuda()
+            model.eval()
             # logger.info('SSC classifier model is ready...')
             # model.eval()
             # correct = 0.0
@@ -165,12 +166,11 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                     correct = 0.0
                     view1 = view1.to(device).detach()
                     view2 = view2.to(device).detach()
+                    data_dict = model.forward(view1.to(device, non_blocking=True), view2.to(device, non_blocking=True))
                     # original = original.to(device)
                     # backbone_view = resnet50(original)
-                    img1 = model(view1)  # only use view 1
-                    img2 = model(view2)
-                    test1 = backbone_view - img1
-                    test2 = backbone_view - img2
+                    test1 = data_dict['z1']  # only use view 1
+                    test2 = data_dict['z2']
                     test = test1 + test2
                     prediction = classifier(test)
                     # val, idx = prediction.topk(1)
@@ -233,8 +233,8 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                     test_accuracy = float(test_correct / len(testset))
                     last_accuracy = test_accuracy
                     if test_accuracy > best_accuracy:  # the current best classifier
-                        lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-classifier-best.pth'
-                        lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-base-best.pth'
+                        lt_classifier_name = model_name_ + '-resnet50-' + time_str + '-simclr-classifier-best.pth'
+                        lt_base_name = model_name_ + '-resnet50-' + time_str + '-simclr-base-best.pth'
                         torch.save(model, model_path + lt_base_name)
                         torch.save(classifier, model_path + lt_classifier_name)
                         logger.info(
