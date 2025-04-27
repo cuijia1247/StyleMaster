@@ -91,9 +91,9 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
     # define optimizer
 
     model = SimCLR()
-    # resnet50 = models.resnet50(pretrained=True)
-    # resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
-    # resnet50 = resnet50.eval()
+    resnet50 = models.resnet50(pretrained=True)
+    resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
+    resnet50 = resnet50.eval()
     model = model.to(device)
     args = get_args()
     optimizer = get_optimizer(
@@ -167,10 +167,10 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                     view1 = view1.to(device).detach()
                     view2 = view2.to(device).detach()
                     data_dict = model.forward(view1.to(device, non_blocking=True), view2.to(device, non_blocking=True))
-                    # original = original.to(device)
-                    # backbone_view = resnet50(original)
-                    test1 = data_dict['z1']  # only use view 1
-                    test2 = data_dict['z2']
+                    original = original.to(device)
+                    backbone_view = resnet50(original)
+                    test1 = backbone_view - data_dict['z1']  # only use view 1
+                    test2 = backbone_view - data_dict['z2']
                     test = test1 + test2
                     prediction = classifier(test)
                     # val, idx = prediction.topk(1)
@@ -196,7 +196,7 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                 len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 50 == 49:
+                if i % 50 == 19:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
@@ -205,8 +205,12 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                         view2 = view2.to(device).detach()
                         data_dict = model.forward(view1.to(device, non_blocking=True),
                                                   view2.to(device, non_blocking=True))
-                        test1 = data_dict['z1']  # only use view 1
-                        test2 = data_dict['z2']
+                        original = original.to(device)
+                        backbone_view = resnet50(original)
+                        test1 = backbone_view - data_dict['z1']  # only use view 1
+                        test2 = backbone_view - data_dict['z2']
+                        # test1 = data_dict['z1']  # only use view 1
+                        # test2 = data_dict['z2']
                         test = test1 + test2
                         prediction = classifier(test)
                         # val, idx = prediction.topk(1)
