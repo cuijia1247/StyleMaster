@@ -53,14 +53,12 @@ class SimCLR(nn.Module):
             self.projector
         )
 
-
-
     def forward(self, x1, x2):
         z1 = self.encoder(x1)
         z2 = self.encoder(x2)
 
         loss = NT_XentLoss(z1, z2)
-        return {'loss':loss}
+        return {'loss':loss, 'z1':z1, 'z2':z2}
 
 
 

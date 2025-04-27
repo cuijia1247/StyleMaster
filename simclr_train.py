@@ -1,6 +1,5 @@
-# ssc new training code after 20250425
 # Author: cuijia1247
-# Date: 2024-7-19
+# Date: 2025-4-27
 # version: 1.0
 import logging
 import time
@@ -10,10 +9,13 @@ import torch.optim as optim
 import torchvision.models as models
 from torch.autograd import Variable
 import numpy as np
-from ssc.Sscreg import SscReg
+# from ssc.Sscreg import SscReg
+from simclr.simclr import SimCLR
 from ssc.utils import criterion, get_byol_transforms, MultiViewDataInjector
 from SscDataSet import SscDataset
 from ssc.classifier import Classifier
+from simclr.optimizers import get_optimizer, LR_Scheduler
+from simclr.arguments import get_args
 
 #setup device for cuda or cpu
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -33,7 +35,7 @@ def parameter_load():
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
-    classifier_training_gap = 25
+    classifier_training_gap = 50
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output)#, classifier_structure
@@ -42,7 +44,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.debug('THIS IS THE FORMAL TRAINING PROCESS')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-    logger.info('SSC parameter setting up...')
+    logger.info('simlar parameter setting up...')
     # load all the parameters
     (epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_, batch_size_sample_,
      classifier_training_gap_, backbone_, ssc_backend_, ssc_input_, ssc_output_)= parameter_load()
@@ -55,15 +57,15 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     model_name_ = opt_model_name  ####optimal
     # display all the necessary parameters & record them in logger
     logger.info('dataset = %s', dataset)
-    logger.info('backbone is %s', backbone_) # for now backbone == backend
+    # logger.info('backbone is %s', backbone_) # for now backbone == backend
     logger.info('epochs = %d', epochs)
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
-    logger.info('SSC backend = %s', ssc_backend_)
-    logger.info('SSC input = %d', ssc_input_)
-    logger.info('SSC output = %d', ssc_output_)
+    # logger.info('SSC backend = %s', ssc_backend_)
+    # logger.info('SSC input = %d', ssc_input_)
+    # logger.info('SSC output = %d', ssc_output_)
     logger.info('SSC learning rate = %f', base_lr)
-    logger.info('sub patch size = (%d, %d)', image_size, image_size)
-    logger.info('sub pathc sample is %s', batch_size_sample_)
+    # logger.info('sub patch size = (%d, %d)', image_size, image_size)
+    # logger.info('sub pathc sample is %s', batch_size_sample_)
     logger.info('classifier training gap = %d', classifier_training_gap_)
     logger.info('classifier iteration is %d', classifier_iteration_)
     logger.info('classifier learning rate = %f', classifier_lr_)
@@ -82,20 +84,36 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
-    logger.info('SSC ' + dataSource + ' is ready...')
+    logger.info('simclr ' + dataSource + ' is ready...')
 
-    lr = base_lr*batch_size/offset_bs
-    #set up the SSC model
-    # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
-    model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
-    resnet50 = models.resnet50(pretrained=True)
-    resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
-    resnet50 = resnet50.eval()
+    # lr = base_lr*batch_size/offset_bs
+    #set up the simclr model
+    # define optimizer
+
+    model = SimCLR()
+    # resnet50 = models.resnet50(pretrained=True)
+    # resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
+    # resnet50 = resnet50.eval()
     model = model.to(device)
-    resnet50 = resnet50.to(device)
-    params = model.parameters()
-    optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
-    logger.info('SSC model is ready...')
+    args = get_args()
+    optimizer = get_optimizer(
+        args.train.optimizer.name, model,
+        lr=args.train.base_lr * args.train.batch_size / 256,
+        momentum=args.train.optimizer.momentum,
+        weight_decay=args.train.optimizer.weight_decay)
+
+    lr_scheduler = LR_Scheduler(
+        optimizer,
+        args.train.warmup_epochs, args.train.warmup_lr * args.train.batch_size / 256,
+        args.train.num_epochs, args.train.base_lr * args.train.batch_size / 256,
+                                  args.train.final_lr * args.train.batch_size / 256,
+        len(trainloader),
+        constant_predictor_lr=True  # see the end of section 4.2 predictor
+    )
+    # resnet50 = resnet50.to(device)
+    # params = model.parameters()
+    # optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
+    logger.info('simclr model is ready...')
 
 
     # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
@@ -104,19 +122,26 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     last_accuracy = 0.0
     for epoch in range(epochs):
         # print('epoch is {}'.format(epoch))
+        model.train()
         tk0 = trainloader
         train_loss = []
         # temploss = total_loss / (1860*100)
         for view1, view2, label, name, _ in tk0:
+            model.zero_grad()
             view1 = view1.to(device)
             view2 = view2.to(device)
-            fx = model(view1)
-            fx1 = model(view2)
-            loss = criterion(fx, fx1)
-            train_loss.append(loss.item())
-            optimizer.zero_grad()
+            data_dict = model.forward(view1.to(device, non_blocking=True), view2.to(device, non_blocking=True))
+            loss = data_dict['loss'].mean()  # ddp
             loss.backward()
             optimizer.step()
+            lr_scheduler.step()
+            # fx = model(view1)
+            # fx1 = model(view2)
+            # loss = criterion(fx, fx1)
+            # train_loss.append(loss.item())
+            # optimizer.zero_grad()
+            # loss.backward()
+            # optimizer.step()
         if epoch % 10 == 0 or epoch == epochs-1:
             logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
@@ -243,9 +268,7 @@ if __name__ == '__main__':
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
     class_number = 10
-    # ssc_output = 2048 #the best
-    model_name = 'ssc-webstyle'
-    #setup logger for record the process data
+    model_name = 'simclr_webstyle'
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
