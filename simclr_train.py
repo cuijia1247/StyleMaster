@@ -21,7 +21,7 @@ from simclr.arguments import get_args
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 200 #best, perhaps6001
+    epochs = 300 #best, perhaps6001
     # backbone = 'resnet50'
     # ssc_backend = 'resnet50'
     ssc_input = 2048
@@ -31,11 +31,11 @@ def parameter_load():
     # offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 100 #best
+    classfier_iteration = 150 #best
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
-    classifier_training_gap = 50
+    classifier_training_gap = 30
     model_name = ''
     return (epochs, batch_size_, base_lr, image_size, classfier_iteration, classifier_lr, model_name,
             classifier_training_gap, ssc_input, ssc_output)#, classifier_structure
@@ -95,6 +95,7 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
     resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
     resnet50 = resnet50.eval()
     model = model.to(device)
+    resnet50 = resnet50.to(device)
     args = get_args()
     optimizer = get_optimizer(
         args.train.optimizer.name, model,
@@ -167,10 +168,12 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                     view1 = view1.to(device).detach()
                     view2 = view2.to(device).detach()
                     data_dict = model.forward(view1.to(device, non_blocking=True), view2.to(device, non_blocking=True))
+                    #############simclr in ssc way
                     original = original.to(device)
                     backbone_view = resnet50(original)
                     test1 = backbone_view - data_dict['z1']  # only use view 1
                     test2 = backbone_view - data_dict['z2']
+                    ###########################
                     test = test1 + test2
                     prediction = classifier(test)
                     # val, idx = prediction.topk(1)
@@ -205,10 +208,12 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                         view2 = view2.to(device).detach()
                         data_dict = model.forward(view1.to(device, non_blocking=True),
                                                   view2.to(device, non_blocking=True))
+                        #############simclr in ssc way
                         original = original.to(device)
                         backbone_view = resnet50(original)
                         test1 = backbone_view - data_dict['z1']  # only use view 1
                         test2 = backbone_view - data_dict['z2']
+                        ###########################
                         # test1 = data_dict['z1']  # only use view 1
                         # test2 = data_dict['z2']
                         test = test1 + test2
@@ -235,8 +240,8 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                     test_accuracy = float(test_correct / len(testset))
                     last_accuracy = test_accuracy
                     if test_accuracy > best_accuracy:  # the current best classifier
-                        lt_classifier_name = model_name_ + '-resnet50-' + time_str + '-simclr-classifier-best.pth'
-                        lt_base_name = model_name_ + '-resnet50-' + time_str + '-simclr-base-best.pth'
+                        lt_classifier_name = model_name_ + '-SSC-resnet50-' + time_str + '-simclr-classifier-best.pth'
+                        lt_base_name = model_name_ + '-SSC-resnet50-' + time_str + '-simclr-base-best.pth'
                         torch.save(model, model_path + lt_base_name)
                         torch.save(classifier, model_path + lt_classifier_name)
                         logger.info(
