@@ -21,14 +21,14 @@ from simclr.arguments import get_args
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 1000 #best, perhaps6001
-    backbone = 'resnet50'
-    ssc_backend = 'resnet50'
+    epochs = 200 #best, perhaps6001
+    # backbone = 'resnet50'
+    # ssc_backend = 'resnet50'
     ssc_input = 2048
     ssc_output = 2048
     batch_size_ = 64
     # batch_size_sample = 'None'
-    offset_bs = 512
+    # offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
     classfier_iteration = 100 #best
@@ -37,8 +37,8 @@ def parameter_load():
     # classifier_structure = '2048-1024-512-13 with dropout'
     classifier_training_gap = 50
     model_name = ''
-    return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name,
-            classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output)#, classifier_structure
+    return (epochs, batch_size_, base_lr, image_size, classfier_iteration, classifier_lr, model_name,
+            classifier_training_gap, ssc_input, ssc_output)#, classifier_structure
 
 def simclr_train(logger, model_path, current_time, opt_model_name, dataset, class_number):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -46,12 +46,12 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.info('simlar parameter setting up...')
     # load all the parameters
-    (epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_,
-     classifier_training_gap_, backbone_, ssc_backend_, ssc_input_, ssc_output_)= parameter_load()
+    (epochs_, batch_size_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_,
+     classifier_training_gap_, ssc_input_, ssc_output_)= parameter_load()
     # the training parameters
     epochs = epochs_
     batch_size = batch_size_
-    offset_bs = offset_bs_
+    # offset_bs = offset_bs_
     base_lr = base_lr_
     image_size = image_size_
     model_name_ = opt_model_name  ####optimal
@@ -59,7 +59,7 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
     logger.info('dataset = %s', dataset)
     # logger.info('backbone is %s', backbone_) # for now backbone == backend
     logger.info('epochs = %d', epochs)
-    logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
+    logger.info('batch_size = %d', batch_size)
     # logger.info('SSC backend = %s', ssc_backend_)
     # logger.info('SSC input = %d', ssc_input_)
     # logger.info('SSC output = %d', ssc_output_)
@@ -265,7 +265,7 @@ if __name__ == '__main__':
     # dataSource = './data/Arch/'  # Arch dataset, classes = 25
     # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91'  # artbench dataset, classes = 10
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/'  # the '/' is necessary
     class_number = 13
     model_name = 'simclr_painting91'
     logger = logging.getLogger("my_logger")

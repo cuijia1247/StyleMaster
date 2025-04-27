@@ -28,7 +28,7 @@ def NT_XentLoss(z1, z2, temperature=0.5):
 
 
 class projection_MLP(nn.Module):
-    def __init__(self, in_dim, out_dim=256):
+    def __init__(self, in_dim, out_dim=2048):
         super().__init__()
         hidden_dim = in_dim
         self.layer1 = nn.Sequential(
