@@ -1,3 +1,4 @@
+# This codes are clear and simple
 import torch
 import torch.nn as nn
 from torchvision.models import resnet50
