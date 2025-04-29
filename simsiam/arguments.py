@@ -42,12 +42,12 @@ def set_deterministic(seed):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config-file', required=True, type=str, help="xxx.yaml")
+    parser.add_argument('-c', '--config-file', default='/home/cuijia1247/Codes/SubStyleClassfication/simsiam/simsiam.yaml', help="xxx.yaml")
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--debug_subset_size', type=int, default=8)
     parser.add_argument('--download', action='store_true', help="if can't find dataset, download from web")
     parser.add_argument('--data_dir', type=str, default=os.getenv('DATA'))
-    parser.add_argument('--log_dir', type=str, default=os.getenv('LOG'))
+    parser.add_argument('--log_dir', type=str, default='/home/cuijia1247/Codes/SubStyleClassfication/log')
     parser.add_argument('--ckpt_dir', type=str, default=os.getenv('CHECKPOINT'))
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--eval_from', type=str, default=None)
@@ -70,16 +70,16 @@ def get_args():
         args.dataset.num_workers = 0
 
 
-    assert not None in [args.log_dir, args.data_dir, args.ckpt_dir, args.name]
+    # assert not None in [args.log_dir, args.data_dir, args.ckpt_dir, args.name]
 
-    args.log_dir = os.path.join(args.log_dir, 'in-progress_'+datetime.now().strftime('%m%d%H%M%S_')+args.name)
-
-    os.makedirs(args.log_dir, exist_ok=False)
-    print(f'creating file {args.log_dir}')
-    os.makedirs(args.ckpt_dir, exist_ok=True)
-
-    shutil.copy2(args.config_file, args.log_dir)
-    set_deterministic(args.seed)
+    # args.log_dir = os.path.join(args.log_dir, 'in-progress_'+datetime.now().strftime('%m%d%H%M%S_')+args.name)
+    #
+    # os.makedirs(args.log_dir, exist_ok=False)
+    # print(f'creating file {args.log_dir}')
+    # os.makedirs(args.ckpt_dir, exist_ok=True)
+    #
+    # shutil.copy2(args.config_file, args.log_dir)
+    # set_deterministic(args.seed)
 
 
     vars(args)['aug_kwargs'] = {

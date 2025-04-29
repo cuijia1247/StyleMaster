@@ -42,7 +42,7 @@ def set_deterministic(seed):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config-file', type=str, default='/home/cuijia1247/Codes/SubStyleClassfication/simclr/simclr.yaml', help="xxx.yaml")
+    parser.add_argument('-c', '--config-file', type=str, default='/home/cuijia1247/Codes/SubStyleClassfication/byol/byol.yaml', help="xxx.yaml")
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--debug_subset_size', type=int, default=8)
     parser.add_argument('--download', action='store_true', help="if can't find dataset, download from web")

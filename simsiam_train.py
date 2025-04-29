@@ -45,7 +45,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.debug('THIS IS THE FORMAL TRAINING PROCESS')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-    logger.info('byol parameter setting up...')
+    logger.info('simsiam parameter setting up...')
     # load all the parameters
     (epochs_, batch_size_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_,
      classifier_training_gap_, ssc_input_, ssc_output_, classifier_test_gap_)= parameter_load()
@@ -86,7 +86,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
-    logger.info('byol ' + dataSource + ' is ready...')
+    logger.info('simsiam ' + dataSource + ' is ready...')
 
     # lr = base_lr*batch_size/offset_bs
     #set up the simclr model
@@ -242,8 +242,8 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
                     test_accuracy = float(test_correct / len(testset))
                     last_accuracy = test_accuracy
                     if test_accuracy > best_accuracy:  # the current best classifier
-                        lt_classifier_name = model_name_ + '-SSC-resnet50-' + time_str + '-byol-classifier-best.pth'
-                        lt_base_name = model_name_ + '-SSC-resnet50-' + time_str + '-byol-base-best.pth'
+                        lt_classifier_name = model_name_ + '-SSC-resnet50-' + time_str + '-simsiam-classifier-best.pth'
+                        lt_base_name = model_name_ + '-SSC-resnet50-' + time_str + '-simsiam-base-best.pth'
                         torch.save(model, model_path + lt_base_name)
                         torch.save(classifier, model_path + lt_classifier_name)
                         logger.info(
@@ -257,8 +257,8 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
             total_loss += np.mean(trainstyle_loss)
             # total_loss = total_loss / 50
             if epoch == epochs - 1:
-                lt_classifier_name = model_name_ + '-byol-resnet50-' + time_str + '-SSC-classifier-last.pth'
-                lt_base_name = model_name_ + '-byol-resnet50-' + time_str + '-SSC-base-last.pth'
+                lt_classifier_name = model_name_ + '-simsiam-resnet50-' + time_str + '-SSC-classifier-last.pth'
+                lt_base_name = model_name_ + '-simsiam-resnet50-' + time_str + '-SSC-base-last.pth'
                 torch.save(model, model_path + lt_base_name)
                 torch.save(classifier, model_path + lt_classifier_name)
                 logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
@@ -276,7 +276,7 @@ if __name__ == '__main__':
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/'  # the '/' is necessary
     class_number = 13
-    model_name = 'byol_painting91'
+    model_name = 'simsiam_painting91'
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
