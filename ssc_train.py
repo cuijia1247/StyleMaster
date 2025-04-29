@@ -33,10 +33,11 @@ def parameter_load():
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
-    classifier_training_gap = 25
+    classifier_training_gap = 30
+    classifier_test_gap = 30
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
-            classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output)#, classifier_structure
+            classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
 
 def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_number):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -45,7 +46,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     logger.info('SSC parameter setting up...')
     # load all the parameters
     (epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_, batch_size_sample_,
-     classifier_training_gap_, backbone_, ssc_backend_, ssc_input_, ssc_output_)= parameter_load()
+     classifier_training_gap_, backbone_, ssc_backend_, ssc_input_, ssc_output_, classifier_test_gap_)= parameter_load()
     # the training parameters
     epochs = epochs_
     batch_size = batch_size_
@@ -64,7 +65,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     logger.info('SSC learning rate = %f', base_lr)
     logger.info('sub patch size = (%d, %d)', image_size, image_size)
     logger.info('sub pathc sample is %s', batch_size_sample_)
-    logger.info('classifier training gap = %d', classifier_training_gap_)
+    logger.info('classifier iteration is %d', classifier_iteration_)
+    logger.info('classifier learning rate = %f', classifier_lr_)
     logger.info('classifier iteration is %d', classifier_iteration_)
     logger.info('classifier learning rate = %f', classifier_lr_)
     # logger.info('classifier structure = %s', classifier_structure_)  ####optimal
@@ -167,11 +169,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # total_loss += style_loss
                 trainstyle_loss.append(style_loss.item())
                 # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                if i % 10 == 9:
+                if i % 20 == 19:
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                 len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 10 == 9:
+                # if i % 10 == 9:
+                if i % classifier_test_gap_ == classifier_test_gap_ - 1:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
@@ -241,8 +244,10 @@ if __name__ == '__main__':
     # dataSource = './data/Arch/'  # Arch dataset, classes = 25
     # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
-    dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
-    class_number = 10
+    # dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
+    # class_number = 10
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/'  # the '/' is necessary
+    class_number = 13
     # ssc_output = 2048 #the best
     model_name = 'ssc-webstyle'
     #setup logger for record the process data
