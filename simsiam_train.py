@@ -64,7 +64,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     # logger.info('SSC backend = %s', ssc_backend_)
     # logger.info('SSC input = %d', ssc_input_)
     # logger.info('SSC output = %d', ssc_output_)
-    logger.info('byol learning rate = %f', base_lr)
+    logger.info('simsiam learning rate = %f', base_lr)
     # logger.info('sub patch size = (%d, %d)', image_size, image_size)
     # logger.info('sub pathc sample is %s', batch_size_sample_)
     logger.info('classifier training gap = %d', classifier_training_gap_)
@@ -116,7 +116,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     # resnet50 = resnet50.to(device)
     # params = model.parameters()
     # optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
-    logger.info('byol model is ready...')
+    logger.info('simsiam model is ready...')
 
 
     # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
@@ -146,7 +146,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
             # loss.backward()
             # optimizer.step()
         if epoch % 10 == 0 or epoch == epochs-1:
-            logger.info('The epoch is %d, byol train loss is %f', epoch, np.mean(train_loss))
+            logger.info('The epoch is %d, simsiam train loss is %f', epoch, np.mean(train_loss))
             # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
             # train the style classifier every 500 iterations
         if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
