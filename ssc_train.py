@@ -19,7 +19,7 @@ from ssc.classifier import Classifier
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 1000 #best, perhaps6001
+    epochs = 300 #best, perhaps6001
     backbone = 'resnet50'
     ssc_backend = 'resnet50'
     ssc_input = 2048
@@ -29,7 +29,7 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 100 #best
+    classfier_iteration = 180 #best
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
@@ -249,7 +249,7 @@ if __name__ == '__main__':
     dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/'  # the '/' is necessary
     class_number = 13
     # ssc_output = 2048 #the best
-    model_name = 'ssc-webstyle'
+    model_name = 'ssc-painting91'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
