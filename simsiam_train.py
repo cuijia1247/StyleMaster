@@ -35,10 +35,11 @@ def parameter_load():
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
-    classifier_training_gap = 25
+    classifier_training_gap = 30
+    classifier_test_gap = 30
     model_name = ''
     return (epochs, batch_size_, base_lr, image_size, classfier_iteration, classifier_lr, model_name,
-            classifier_training_gap, ssc_input, ssc_output)#, classifier_structure
+            classifier_training_gap, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
 
 def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_number):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -47,7 +48,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     logger.info('byol parameter setting up...')
     # load all the parameters
     (epochs_, batch_size_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_,
-     classifier_training_gap_, ssc_input_, ssc_output_)= parameter_load()
+     classifier_training_gap_, ssc_input_, ssc_output_, classifier_test_gap_)= parameter_load()
     # the training parameters
     epochs = epochs_
     batch_size = batch_size_
@@ -67,6 +68,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     # logger.info('sub patch size = (%d, %d)', image_size, image_size)
     # logger.info('sub pathc sample is %s', batch_size_sample_)
     logger.info('classifier training gap = %d', classifier_training_gap_)
+    logger.info('classifier test gap = %d', classifier_test_gap_)
     logger.info('classifier iteration is %d', classifier_iteration_)
     logger.info('classifier learning rate = %f', classifier_lr_)
     # logger.info('classifier structure = %s', classifier_structure_)  ####optimal
@@ -90,7 +92,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     #set up the simclr model
     # define optimizer
 
-    model = BYOL()
+    model = SimSiam()
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
     resnet50 = resnet50.eval()
@@ -195,11 +197,11 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
                 # total_loss += style_loss
                 trainstyle_loss.append(style_loss.item())
                 # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                if i % 10 == 9:
+                if i % 20 == 19:
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                 len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 50 == 19:
+                if i % classifier_test_gap_ == classifier_test_gap_-1:
                     test_correct = 0.0
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
