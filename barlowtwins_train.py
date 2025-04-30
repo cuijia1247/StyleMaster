@@ -21,7 +21,7 @@ from ssc.classifier import Classifier
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 300 #best, perhaps6001
+    epochs = 200 #best, perhaps6001
     # backbone = 'resnet50'
     # ssc_backend = 'resnet50'
     ssc_input = 2048
@@ -31,12 +31,12 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 150 #best
+    classfier_iteration = 100 #best
     # classfier_iteration = 300  # best
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
-    classifier_training_gap = 30
-    classifier_test_gap = 30
+    classifier_training_gap = 25
+    classifier_test_gap = 25
     model_name = ''
     return (epochs, batch_size_, base_lr, image_size, classfier_iteration, classifier_lr, model_name,
             classifier_training_gap, ssc_input, ssc_output, classifier_test_gap, offset_bs)#, classifier_structure
