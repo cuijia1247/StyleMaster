@@ -90,7 +90,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
 
     lr = 3e-4
     # define optimizer
-    model = BarlowTwins()
+    model = BarlowTwins(2048, 2048)
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
     resnet50 = resnet50.eval()
@@ -115,8 +115,8 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
             model.zero_grad()
             view1 = view1.to(device)
             view2 = view2.to(device)
-            z1, z2 = model.forward(view1, view2, barlow_lambda)
-            loss = barlow_loss_fun(z1, z2)
+            z1, z2 = model.forward(view1, view2)
+            loss = barlow_loss_fun(z1, z2, barlow_lambda)
             # loss = data_dict['loss'].mean()  # ddp
             optimizer.zero_grad()
             loss.backward()
