@@ -10,7 +10,7 @@ from pytorch_lightning.callbacks import (
     ModelSummary,
 )
 from pytorch_lightning.loggers import WandbLogger
-from model import IJEPA_base
+from ijepa_model import IJEPA_base
 
 
 '''Dummy Dataset'''
