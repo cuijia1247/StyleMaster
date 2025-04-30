@@ -17,6 +17,6 @@ wikiart3
 13	浪漫主义	romanticism			9169
 14	超现实主义	surrealism			5112
 15	象征主义	symbolism			5542
-总共	All 6999
+总共	All 69999
 
 submit: Cui Jia

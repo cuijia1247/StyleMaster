@@ -31,7 +31,8 @@
 - [x] add simCLR code in this project
 - [x] add byol code in this project
 - [x] add simsiam code in this project
-- [ ] add barlow twins code in this project
+- [x] add barlow twins code in this project
+- [ ] add I-JEPA codes in this project
 - [ ] run test on all datasets
 - [x] check out the distance computation approaches in the current SSC project
 - [ ] try some different combination of distance computing ways
