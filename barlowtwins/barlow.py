@@ -28,9 +28,6 @@ class BarlowTwins(nn.Module):
     #Feeding the data through the encoder and projector
     z1 = self.proj(self.encoder(x1))
     z2= self.proj(self.encoder(x2))
-    
-    
-    
     return z1, z2
 
 
@@ -53,7 +50,7 @@ class BarlowTwins_FT(nn.Module):
     return out
 
 
-def loss_fun(z1, z2, lmbda):
+def barlow_loss_fun(z1, z2, lmbda):
 
   #Normalize the projector's output across the batch
   norm_z1 = (z1 - z1.mean(0))/ z1.std(0)
