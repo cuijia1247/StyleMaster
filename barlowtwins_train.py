@@ -146,12 +146,12 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
                     correct = 0.0
                     view1 = view1.to(device).detach()
                     view2 = view2.to(device).detach()
-                    data_dict = model.forward(view1.to(device, non_blocking=True), view2.to(device, non_blocking=True))
+                    z1, z2 = model.forward(view1, view2)
                     #############simclr in ssc way
                     original = original.to(device)
                     backbone_view = resnet50(original)
-                    test1 = backbone_view - data_dict['z1']  # only use view 1
-                    test2 = backbone_view - data_dict['z2']
+                    test1 = backbone_view - z1  # only use view 1
+                    test2 = backbone_view - z2
                     ###########################
                     test = test1 + test2
                     prediction = classifier(test)
@@ -185,13 +185,12 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
                         correct_ = 0.0
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
-                        data_dict = model.forward(view1.to(device, non_blocking=True),
-                                                  view2.to(device, non_blocking=True))
+                        z1, z2 = model.forward(view1, view2)
                         #############simclr in ssc way
                         original = original.to(device)
                         backbone_view = resnet50(original)
-                        test1 = backbone_view - data_dict['z1']  # only use view 1
-                        test2 = backbone_view - data_dict['z2']
+                        test1 = backbone_view - z1  # only use view 1
+                        test2 = backbone_view - z2
                         ###########################
                         # test1 = data_dict['z1']  # only use view 1
                         # test2 = data_dict['z2']
