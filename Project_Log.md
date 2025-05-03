@@ -33,6 +33,7 @@
 - [x] add simsiam code in this project
 - [x] add barlow twins code in this project
 - [ ] add I-JEPA codes in this project
+- [ ] run test experiment on painting91 of above models
 - [ ] run test on all datasets
 - [x] check out the distance computation approaches in the current SSC project
 - [ ] try some different combination of distance computing ways
