@@ -9,8 +9,8 @@ import torch.optim as optim
 import torchvision.models as models
 from torch.autograd import Variable
 import numpy as np
-# from ssc.Sscreg import SscReg
-from barlowtwins.barlow import BarlowTwins, barlow_loss_fun
+from ijepa.pretrain_IJEPA import IJEPA
+# from barlowtwins.barlow import BarlowTwins, barlow_loss_fun
 from ssc.utils import criterion, get_byol_transforms, MultiViewDataInjector
 from SscDataSet import SscDataset
 from ssc.classifier import Classifier
@@ -63,7 +63,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     # logger.info('SSC backend = %s', ssc_backend_)
     # logger.info('SSC input = %d', ssc_input_)
     # logger.info('SSC output = %d', ssc_output_)
-    logger.info('barlow learning rate = %f', base_lr)
+    logger.info('IJEPA learning rate = %f', base_lr)
     # logger.info('sub patch size = (%d, %d)', image_size, image_size)
     # logger.info('sub pathc sample is %s', batch_size_sample_)
     logger.info('classifier training gap = %d', classifier_training_gap_)
@@ -85,11 +85,11 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
-    logger.info('barlow ' + dataSource + ' is ready...')
+    logger.info('IJEPA ' + dataSource + ' is ready...')
 
     lr = 3e-4
     # define optimizer
-    model = BarlowTwins(2048, 2048)
+    model = IJEPA(2048, 2048)
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
     resnet50 = resnet50.eval()
@@ -97,7 +97,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     resnet50 = resnet50.to(device)
     params = model.parameters()
     optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
-    logger.info('barlow model is ready...')
+    logger.info('IJEPA model is ready...')
     barlow_lambda = 5e-3
 
     # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
@@ -217,8 +217,8 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
                     test_accuracy = float(test_correct / len(testset))
                     last_accuracy = test_accuracy
                     if test_accuracy > best_accuracy:  # the current best classifier
-                        lt_classifier_name = model_name_ + '-SSC-resnet50-' + time_str + '-barlow-classifier-best.pth'
-                        lt_base_name = model_name_ + '-SSC-resnet50-' + time_str + '-barlow-base-best.pth'
+                        lt_classifier_name = model_name_ + '-SSC-resnet50-' + time_str + '-IJEPA-classifier-best.pth'
+                        lt_base_name = model_name_ + '-SSC-resnet50-' + time_str + '-IJEPA-base-best.pth'
                         torch.save(model, model_path + lt_base_name)
                         torch.save(classifier, model_path + lt_classifier_name)
                         logger.info(
@@ -232,8 +232,8 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
             total_loss += np.mean(trainstyle_loss)
             # total_loss = total_loss / 50
             if epoch == epochs - 1:
-                lt_classifier_name = model_name_ + '-barlow-resnet50-' + time_str + '-SSC-classifier-last.pth'
-                lt_base_name = model_name_ + '-barlow-resnet50-' + time_str + '-SSC-base-last.pth'
+                lt_classifier_name = model_name_ + '-IJEPA-resnet50-' + time_str + '-SSC-classifier-last.pth'
+                lt_base_name = model_name_ + '-IJEPA-resnet50-' + time_str + '-SSC-base-last.pth'
                 torch.save(model, model_path + lt_base_name)
                 torch.save(classifier, model_path + lt_classifier_name)
                 logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
@@ -251,7 +251,7 @@ if __name__ == '__main__':
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/'  # the '/' is necessary
     class_number = 13
-    model_name = 'barlow_painting91'
+    model_name = 'IJEPA_painting91'
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
