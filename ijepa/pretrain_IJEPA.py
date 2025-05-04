@@ -76,7 +76,7 @@ class IJEPA(pl.LightningModule):
     def __init__(
             self,
             img_size=224,
-            patch_size=16,
+            patch_size=64,
             in_chans=3, 
             embed_dim=64,
             enc_heads=8,
@@ -198,7 +198,7 @@ if __name__ == '__main__':
         accelerator='gpu',
         devices=1,
         precision=16,
-        max_epochs=10,
+        max_epochs=100,
         callbacks=[lr_monitor, model_summary],
         gradient_clip_val=.1,
     )
