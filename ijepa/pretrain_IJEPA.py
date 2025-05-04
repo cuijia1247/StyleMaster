@@ -187,7 +187,7 @@ class IJEPA(pl.LightningModule):
 
 
 if __name__ == '__main__':
-    dataset = D2VDataModule(dataset_path='data')
+    dataset = D2VDataModule(dataset_path='../data/Painting91/')
 
     model = IJEPA(img_size=224, patch_size=16, in_chans=3, embed_dim=64, enc_heads=8, enc_depth=8, decoder_depth=6, lr=1e-3)
     

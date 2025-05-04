@@ -89,7 +89,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
 
     lr = 3e-4
     # define optimizer
-    model = IJEPA(2048, 2048)
+    model = IJEPA()
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
     resnet50 = resnet50.eval()
@@ -98,7 +98,7 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
     params = model.parameters()
     optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
     logger.info('IJEPA model is ready...')
-    barlow_lambda = 5e-3
+    # barlow_lambda = 5e-3
 
     # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
     time_str = current_time
