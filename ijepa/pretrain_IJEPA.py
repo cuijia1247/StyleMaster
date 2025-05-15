@@ -198,8 +198,8 @@ if __name__ == '__main__':
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=1,
-        precision=16,
-        max_epochs=100,
+        precision=32,
+        max_epochs=1000,
         callbacks=[lr_monitor, model_summary],
         gradient_clip_val=.1,
     )

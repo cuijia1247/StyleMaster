@@ -89,9 +89,9 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
 
     lr = 3e-4
     # define optimizer
-    pretrained_model_path = '/home/cuijia1247/Codes/SubStyleClassfication/ijepa/lightning_logs/version_0/checkpoints/epoch=99-step=700.ckpt'
+    pretrained_model_path = '/home/cuijia1247/Codes/SubStyleClassfication/ijepa/lightning_logs/version_0/checkpoints/epoch=999-step=7000.ckpt'
     model = IJEPA.load_from_checkpoint(pretrained_model_path) #if this is work, the param load func could be unused.
-    ssc_output_ = model.embed_dim
+    ssc_output_ = 256
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
     resnet50 = resnet50.eval()
@@ -121,7 +121,10 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
             correct = 0.0
             view1 = view1.to(device).detach()
             view2 = view2.to(device).detach()
-            test1 = model.model(view1)
+            test1 = model.model(view1)[0]
+            test1 = test1.permute(1, 0, 2, 3)
+            test1 = test1.reshape(test1.shape[0], -1)
+            ##combine the dimensionalities
             prediction1 = classifier(test1)
             # prediction2 = classifier(view2)
             label = label - 1
@@ -136,13 +139,14 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
             # correct = idx.eq(label).cpu().sum()
             total_correct += correct
             # total_loss += style_loss
+        print('total correct is {} / {} This is the {}th round'.format(total_correct, len(trainset), epoch))
         trainstyle_loss.append(style_loss.item())
         total_loss += np.mean(trainstyle_loss)
             # total_loss = total_loss / 50
         if epoch == epochs - 1:
             lt_classifier_name = model_name_ + '-IJEPA-resnet50-' + time_str + '-SSC-classifier-last.pth'
-            lt_base_name = model_name_ + '-IJEPA-resnet50-' + time_str + '-SSC-base-last.pth'
-            torch.save(model, model_path + lt_base_name)
+            # lt_base_name = model_name_ + '-IJEPA-resnet50-' + time_str + '-SSC-base-last.pth'
+            # torch.save(model, model_path + lt_base_name)
             torch.save(classifier, model_path + lt_classifier_name)
             logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
     logger.info('The best accuracy is %f, and the last accuracy is %f', best_accuracy, last_accuracy)
