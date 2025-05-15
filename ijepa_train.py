@@ -119,8 +119,11 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
         tk2 = testloader
         for view1, view2, label, name, original in tk1:
             correct = 0.0
-            prediction1 = classifier(view1)
-            prediction2 = classifier(view2)
+            view1 = view1.to(device).detach()
+            view2 = view2.to(device).detach()
+            test1 = model.model(view1)
+            prediction1 = classifier(test1)
+            # prediction2 = classifier(view2)
             label = label - 1
             label = Variable(label).cuda()
             style_loss = classifier_criterion(prediction1, label)

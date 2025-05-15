@@ -138,9 +138,9 @@ class IJEPA_FT(pl.LightningModule):
         return optimizer
 
 if __name__ == '__main__':
-    dataset = D2VDataModule(dataset_path='data')
+    dataset = D2VDataModule(dataset_path='../data/Painting91/')
 
-    model = IJEPA_FT(pretrained_model_path='.ckpt', num_classes=5)
+    model = IJEPA_FT(pretrained_model_path='/home/cuijia1247/Codes/SubStyleClassfication/ijepa/lightning_logs/version_0/checkpoints/epoch=99-step=700.ckpt', num_classes=13)
 
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
