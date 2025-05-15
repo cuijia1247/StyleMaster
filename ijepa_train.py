@@ -25,7 +25,7 @@ def parameter_load():
     # ssc_backend = 'resnet50'
     ssc_input = 2048
     ssc_output = 2048
-    batch_size_ = 16
+    batch_size_ = 196
     # batch_size_sample = 'None'
     offset_bs = 512
     base_lr = 0.008 #best
@@ -89,7 +89,7 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
 
     lr = 3e-4
     # define optimizer
-    pretrained_model_path = '/home/cuijia1247/Codes/SubStyleClassfication/ijepa/lightning_logs/version_3/checkpoints/epoch=5-step=42.ckpt'
+    pretrained_model_path = '/home/cuijia1247/Codes/SubStyleClassfication/ijepa/lightning_logs/version_7/checkpoints/epoch=9-step=70.ckpt'
     model = IJEPA.load_from_checkpoint(pretrained_model_path) #if this is work, the param load func could be unused.
     ssc_output_ = 50176
     resnet50 = models.resnet50(pretrained=True)
@@ -117,11 +117,13 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
         total_correct = 0.0
         tk1 = trainloader
         tk2 = testloader
+        num = 0
         for view1, view2, label, name, original in tk1:
+            num = num + 1
             correct = 0.0
             view1 = view1.to(device).detach()
             view2 = view2.to(device).detach()
-            test1 = model.model(view1)
+            test1 = model.model(view2)[0]
             test1 = test1.permute(1, 0, 2, 3)
             test1 = test1.reshape(test1.shape[0], -1)
             # test2 = model.model(view2)[0]
@@ -141,6 +143,7 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
             correct += pred.eq(label.data.view_as(pred)).cpu().sum()
             # correct = idx.eq(label).cpu().sum()
             total_correct += correct
+            print('total accumulating is {}, iterations is {}'.format(total_correct, num))
             # total_loss += style_loss
         print('total correct is {} / {} This is the {}th round'.format(total_correct, len(trainset), epoch))
         trainstyle_loss.append(style_loss.item())
