@@ -76,7 +76,7 @@ class IJEPA(pl.LightningModule):
     def __init__(
             self,
             img_size=224,
-            patch_size=64,
+            patch_size=16,
             in_chans=3, 
             embed_dim=64,
             enc_heads=8,
@@ -190,7 +190,7 @@ class IJEPA(pl.LightningModule):
 if __name__ == '__main__':
     dataset = D2VDataModule(dataset_path='../data/Painting91/')
 
-    model = IJEPA(img_size=64, patch_size=64, in_chans=3, embed_dim=64, enc_heads=8, enc_depth=8, decoder_depth=6, lr=1e-3)
+    model = IJEPA(img_size=224, patch_size=16, in_chans=3, embed_dim=64, enc_heads=8, enc_depth=8, decoder_depth=6, lr=1e-3)
     
     lr_monitor = LearningRateMonitor(logging_interval="step")
     model_summary = ModelSummary(max_depth=2)
@@ -198,8 +198,8 @@ if __name__ == '__main__':
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=1,
-        precision=32,
-        max_epochs=1000,
+        precision=16,
+        max_epochs=10,
         callbacks=[lr_monitor, model_summary],
         gradient_clip_val=.1,
     )

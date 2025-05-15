@@ -25,7 +25,7 @@ def parameter_load():
     # ssc_backend = 'resnet50'
     ssc_input = 2048
     ssc_output = 2048
-    batch_size_ = 64
+    batch_size_ = 16
     # batch_size_sample = 'None'
     offset_bs = 512
     base_lr = 0.008 #best
@@ -81,17 +81,17 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
     dataSource = dataset
     trainData = 'train'
     trainset = SscDataset(dataSource, trainData, transform=MultiViewDataInjector([transformT, transformT1]))
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=False)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=True)
     logger.info('IJEPA ' + dataSource + ' is ready...')
 
     lr = 3e-4
     # define optimizer
-    pretrained_model_path = '/home/cuijia1247/Codes/SubStyleClassfication/ijepa/lightning_logs/version_0/checkpoints/epoch=999-step=7000.ckpt'
+    pretrained_model_path = '/home/cuijia1247/Codes/SubStyleClassfication/ijepa/lightning_logs/version_3/checkpoints/epoch=5-step=42.ckpt'
     model = IJEPA.load_from_checkpoint(pretrained_model_path) #if this is work, the param load func could be unused.
-    ssc_output_ = 256
+    ssc_output_ = 50176
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
     resnet50 = resnet50.eval()
@@ -121,9 +121,12 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
             correct = 0.0
             view1 = view1.to(device).detach()
             view2 = view2.to(device).detach()
-            test1 = model.model(view1)[0]
+            test1 = model.model(view1)
             test1 = test1.permute(1, 0, 2, 3)
             test1 = test1.reshape(test1.shape[0], -1)
+            # test2 = model.model(view2)[0]
+            # test2 = test2.permute(1, 0, 2, 3)
+            # test2 = test2.reshape(test2.shape[0], -1)
             ##combine the dimensionalities
             prediction1 = classifier(test1)
             # prediction2 = classifier(view2)
