@@ -40,7 +40,7 @@ def parameter_load():
     return (epochs, batch_size_, base_lr, image_size, classfier_iteration, classifier_lr, model_name,
             classifier_training_gap, ssc_input, ssc_output, classifier_test_gap, offset_bs)#, classifier_structure
 
-def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_number):
+def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class_number):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.debug('THIS IS THE FORMAL TRAINING PROCESS')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -264,7 +264,7 @@ if __name__ == '__main__':
     filehandler = logging.FileHandler("./log/" + log_name)
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
-    byol_train(logger, model_path, current_time, model_name, dataSource, class_number)
+    ijepa_train(logger, model_path, current_time, model_name, dataSource, class_number)
     logger.removeHandler(filehandler)
     logger.removeHandler(handler)
 
