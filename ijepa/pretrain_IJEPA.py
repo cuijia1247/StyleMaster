@@ -153,6 +153,7 @@ class IJEPA(pl.LightningModule):
         y_student, y_teacher = self(x, target_aspect_ratio, target_scale, context_aspect_ratio, context_scale)
         loss = self.criterion(y_student, y_teacher)
         self.log('val_loss', loss)
+
         
         return loss
     

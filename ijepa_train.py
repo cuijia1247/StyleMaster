@@ -89,7 +89,9 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
 
     lr = 3e-4
     # define optimizer
-    model = IJEPA()
+    pretrained_model_path = '/home/cuijia1247/Codes/SubStyleClassfication/ijepa/lightning_logs/version_0/checkpoints/epoch=99-step=700.ckpt'
+    model = IJEPA.load_from_checkpoint(pretrained_model_path) #if this is work, the param load func could be unused.
+    ssc_output_ = model.embed_dim
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
     resnet50 = resnet50.eval()
@@ -97,146 +99,49 @@ def ijepa_train(logger, model_path, current_time, opt_model_name, dataset, class
     resnet50 = resnet50.to(device)
     params = model.parameters()
     optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
-    logger.info('IJEPA model is ready...')
+    logger.info('IJEPA test model is ready...')
     # barlow_lambda = 5e-3
-
+    # classifier = Classifier(ssc_output_, class_number).cuda()
+    classifier = Classifier(ssc_output_, class_number).cuda()
+    classifier_criterion = nn.CrossEntropyLoss()
+    classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
+    total_loss = 0.0
+    style_loss = torch.zeros(1).cuda()
     # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
     time_str = current_time
     best_accuracy = 0.0
     last_accuracy = 0.0
     for epoch in range(epochs):
         # print('epoch is {}'.format(epoch))
-        model.train()
-        tk0 = trainloader
-        train_loss = []
-        # temploss = total_loss / (1860*100)
-        for view1, view2, label, name, _ in tk0:
-            model.zero_grad()
-            view1 = view1.to(device)
-            view2 = view2.to(device)
-            z1, z2 = model.forward(view1, view2)
-            loss = barlow_loss_fun(z1, z2, barlow_lambda)
-            # loss = data_dict['loss'].mean()  # ddp
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            train_loss.append(loss.item())
-        if epoch % 10 == 0 or epoch == epochs-1:
-            logger.info('The epoch is %d, barlow train loss is %f', epoch, np.mean(train_loss))
-            # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
-            # train the style classifier every 500 iterations
-        if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
-            classifier = Classifier(ssc_output_, class_number).cuda()
-            classifier_criterion = nn.CrossEntropyLoss()
-            classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
-            total_loss = 0.0
-            style_loss = torch.zeros(1).cuda()
-            model.eval()
-            # logger.info('SSC classifier model is ready...')
-            # model.eval()
-            # correct = 0.0
-            # total_number = len(trainset)
-            for i in range(classifier_iteration_):
-                trainstyle_loss = []
-                total_correct = 0.0
-                tk1 = trainloader
-                tk2 = testloader
-                for view1, view2, label, name, original in tk1:
-                    correct = 0.0
-                    view1 = view1.to(device).detach()
-                    view2 = view2.to(device).detach()
-                    z1, z2 = model.forward(view1, view2)
-                    #############simclr in ssc way
-                    original = original.to(device)
-                    backbone_view = resnet50(original)
-                    test1 = backbone_view - z1  # only use view 1
-                    test2 = backbone_view - z2
-                    ###########################
-                    test = test1 + test2
-                    prediction = classifier(test)
-                    # val, idx = prediction.topk(1)
-                    # idx = idx.t().squeeze()
-                    # idx = idx.cpu().float()
-                    # original_label = label
-                    # label = label.cpu().float()-1
-                    label = label - 1
-                    label = Variable(label).cuda()
-                    style_loss = classifier_criterion(prediction, label)
-                    classifier_optimizer.zero_grad()
-                    # style_loss.requires_grad_()
-                    style_loss.backward()
-                    classifier_optimizer.step()
-                    pred = prediction.data.max(1, keepdim=True)[1]
-                    correct += pred.eq(label.data.view_as(pred)).cpu().sum()
-                    # correct = idx.eq(label).cpu().sum()
-                    total_correct += correct
-                # total_loss += style_loss
-                trainstyle_loss.append(style_loss.item())
-                # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                if i % 20 == 19:
-                    logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
-                                len(trainset))
-                    # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % classifier_test_gap_ == classifier_test_gap_-1:
-                    test_correct = 0.0
-                    classifier.eval()
-                    for view1, view2, label, name, original in tk2:
-                        correct_ = 0.0
-                        view1 = view1.to(device).detach()
-                        view2 = view2.to(device).detach()
-                        z1, z2 = model.forward(view1, view2)
-                        #############simclr in ssc way
-                        original = original.to(device)
-                        backbone_view = resnet50(original)
-                        test1 = backbone_view - z1  # only use view 1
-                        test2 = backbone_view - z2
-                        ###########################
-                        # test1 = data_dict['z1']  # only use view 1
-                        # test2 = data_dict['z2']
-                        test = test1 + test2
-                        prediction = classifier(test)
-                        # val, idx = prediction.topk(1)
-                        # idx = idx.t().squeeze()
-                        # idx = idx.cpu().float()
-                        # original_label = label
-                        # label = label.cpu().float()-1
-                        label = label - 1
-                        label = Variable(label).cuda()
-                        # style_loss = classifier_criterion(prediction, label)
-                        # classifier_optimizer.zero_grad()
-                        # style_loss.requires_grad_()
-                        # style_loss.backward()
-                        # classifier_optimizer.step()
-                        pred = prediction.data.max(1, keepdim=True)[1]
-                        correct_ += pred.eq(label.data.view_as(pred)).cpu().sum()
-                        # correct = idx.eq(label).cpu().sum()
-                        test_correct += correct_
-
-                    # print('TEST RESULTS: The test round is {}, the test ratio is {}/{}, the test accuracy is {}'.format(i,
-                    #             test_correct, len(testset), float(test_correct/len(testset))))
-                    test_accuracy = float(test_correct / len(testset))
-                    last_accuracy = test_accuracy
-                    if test_accuracy > best_accuracy:  # the current best classifier
-                        lt_classifier_name = model_name_ + '-SSC-resnet50-' + time_str + '-IJEPA-classifier-best.pth'
-                        lt_base_name = model_name_ + '-SSC-resnet50-' + time_str + '-IJEPA-base-best.pth'
-                        torch.save(model, model_path + lt_base_name)
-                        torch.save(classifier, model_path + lt_classifier_name)
-                        logger.info(
-                            '+++THE BEST MODEL is saved+++. The best accuracy is %f, and the current accuracy is %f',
-                            best_accuracy, test_accuracy)
-                        best_accuracy = test_accuracy
-                    logger.info(
-                        'Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i,
-                        test_correct,
-                        len(testset), test_accuracy)
-            total_loss += np.mean(trainstyle_loss)
+        trainstyle_loss = []
+        total_correct = 0.0
+        tk1 = trainloader
+        tk2 = testloader
+        for view1, view2, label, name, original in tk1:
+            correct = 0.0
+            prediction1 = classifier(view1)
+            prediction2 = classifier(view2)
+            label = label - 1
+            label = Variable(label).cuda()
+            style_loss = classifier_criterion(prediction1, label)
+            classifier_optimizer.zero_grad()
+            # style_loss.requires_grad_()
+            style_loss.backward()
+            classifier_optimizer.step()
+            pred = prediction1.data.max(1, keepdim=True)[1]
+            correct += pred.eq(label.data.view_as(pred)).cpu().sum()
+            # correct = idx.eq(label).cpu().sum()
+            total_correct += correct
+            # total_loss += style_loss
+        trainstyle_loss.append(style_loss.item())
+        total_loss += np.mean(trainstyle_loss)
             # total_loss = total_loss / 50
-            if epoch == epochs - 1:
-                lt_classifier_name = model_name_ + '-IJEPA-resnet50-' + time_str + '-SSC-classifier-last.pth'
-                lt_base_name = model_name_ + '-IJEPA-resnet50-' + time_str + '-SSC-base-last.pth'
-                torch.save(model, model_path + lt_base_name)
-                torch.save(classifier, model_path + lt_classifier_name)
-                logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
+        if epoch == epochs - 1:
+            lt_classifier_name = model_name_ + '-IJEPA-resnet50-' + time_str + '-SSC-classifier-last.pth'
+            lt_base_name = model_name_ + '-IJEPA-resnet50-' + time_str + '-SSC-base-last.pth'
+            torch.save(model, model_path + lt_base_name)
+            torch.save(classifier, model_path + lt_classifier_name)
+            logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
     logger.info('The best accuracy is %f, and the last accuracy is %f', best_accuracy, last_accuracy)
     logging.shutdown()
 
