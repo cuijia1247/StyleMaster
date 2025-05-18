@@ -10,7 +10,7 @@ from pytorch_lightning.callbacks import (
     ModelSummary,
 )
 from pytorch_lightning.loggers import WandbLogger
-from ijepa_model import IJEPA_base
+from model import IJEPA_base
 
 
 '''Dummy Dataset'''
@@ -76,7 +76,7 @@ class IJEPA(pl.LightningModule):
     def __init__(
             self,
             img_size=224,
-            patch_size=64,
+            patch_size=16,
             in_chans=3, 
             embed_dim=64,
             enc_heads=8,
@@ -187,7 +187,7 @@ class IJEPA(pl.LightningModule):
 
 
 if __name__ == '__main__':
-    dataset = D2VDataModule(dataset_path='../data/Painting91/')
+    dataset = D2VDataModule(dataset_path='/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91')
 
     model = IJEPA(img_size=224, patch_size=16, in_chans=3, embed_dim=64, enc_heads=8, enc_depth=8, decoder_depth=6, lr=1e-3)
     
@@ -198,7 +198,7 @@ if __name__ == '__main__':
         accelerator='gpu',
         devices=1,
         precision=16,
-        max_epochs=100,
+        max_epochs=10,
         callbacks=[lr_monitor, model_summary],
         gradient_clip_val=.1,
     )
