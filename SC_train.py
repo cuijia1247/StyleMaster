@@ -208,6 +208,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                     test_accuracy = float(test_correct / len(testset))
                     last_accuracy = test_accuracy
                     if test_accuracy > best_accuracy:  # the current best classifier
+                        #output all test output results
+
                         lt_classifier_name = model_name_ + '-SSR-resnet50-' + str(test_accuracy) + '-SSC-classifier-best.pth'
                         lt_base_name = model_name_ + '-SSR-resnet50-' + str(test_accuracy) + '-SSC-base-best.pth'
                         torch.save(model, model_path + lt_base_name)
