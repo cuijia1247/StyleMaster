@@ -2,6 +2,7 @@
 # Date: 2024-7-19
 # version: 1.0
 # The codes do not finished yet by 20250425
+# hr change 20250519:add predict label/output result txt
 import logging
 import os
 import time
@@ -28,68 +29,125 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 ####################################################predict codes#############################
 
+# def SSC_predict(model_path, dataSource, class_number, output_path):
+#     base_model = torch.load(model_path+'base-best.pth')
+#     classfier_model = torch.load(model_path+'classifier-best.pth')
+#     resnet50 = models.resnet50(pretrained=True)
+#     resnet50.fc = nn.Linear(2048, ssc_output)
+#     base_model = base_model.eval()
+#     classfier_model = classfier_model.eval()
+#     resnet50 = resnet50.eval()
+#     base_model = base_model.to(device)
+#     classfier_model = classfier_model.to(device)
+#     resnet50 = resnet50.to(device)
+#     transformT, transformT1, transformEvalT = get_byol_transforms(64, (0.485, 0.456, 0.406),
+#                                                                   (0.229, 0.224, 0.225))
+#     norm_mean = [0.485, 0.456, 0.406]
+#     norm_std = [0.229, 0.224, 0.225]
+#     transforms_original = transforms.Compose([
+
+#         transforms.ToTensor(),
+#         transforms.Resize((224, 224)),
+#         transforms.Normalize(norm_mean, norm_std),
+#     ])
+#     transform = MultiViewDataInjector([transformT, transformT1])
+#     for root, dirs, files in os.walk(dataSource):
+#         for file in files:
+#             img = cv2.imread(os.path.join(root, file), cv2.IMREAD_COLOR)
+#             img = cv2.resize(img, (256, 256))
+#             img1, img2 = transform(img)
+#             img1 = img1.unsqueeze(0).to(device)
+#             img2 = img2.unsqueeze(0).to(device)
+#             view1 = base_model(img1)
+#             view2 = base_model(img2)
+#             img = transforms_original(img).to(device)
+#             img = img.unsqueeze(0)
+#             res_view = resnet50(img)
+#             test1 = view1 - res_view
+#             test2 = view2 - res_view
+#             test = test1 + test2
+#             prediction = classfier_model(test)
+#             print(prediction)
+
+#====================================hr-predict-20250519======================================
+
 def SSC_predict(model_path, dataSource, class_number, output_path):
-    base_model = torch.load(model_path+'base-best.pth')
-    classfier_model = torch.load(model_path+'classifier-best.pth')
+    base_model = torch.load(model_path + 'base-best.pth')
+    classfier_model = torch.load(model_path + 'classifier-best.pth')
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Linear(2048, ssc_output)
-    base_model = base_model.eval()
-    classfier_model = classfier_model.eval()
-    resnet50 = resnet50.eval()
-    base_model = base_model.to(device)
-    classfier_model = classfier_model.to(device)
-    resnet50 = resnet50.to(device)
-    transformT, transformT1, transformEvalT = get_byol_transforms(64, (0.485, 0.456, 0.406),
-                                                                  (0.229, 0.224, 0.225))
+    base_model = base_model.eval().to(device)
+    print(base_model)
+    classfier_model = classfier_model.eval().to(device)
+    print(classfier_model)  # 查看最后一层的out_features
+
+    resnet50 = resnet50.eval().to(device)
+    
+
+    transformT, transformT1,transformEval = get_byol_transforms(64, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     norm_mean = [0.485, 0.456, 0.406]
     norm_std = [0.229, 0.224, 0.225]
     transforms_original = transforms.Compose([
-
         transforms.ToTensor(),
         transforms.Resize((224, 224)),
         transforms.Normalize(norm_mean, norm_std),
     ])
     transform = MultiViewDataInjector([transformT, transformT1])
-    for root, dirs, files in os.walk(dataSource):
-        for file in files:
-            img = cv2.imread(os.path.join(root, file), cv2.IMREAD_COLOR)
-            img = cv2.resize(img, (256, 256))
-            img1, img2 = transform(img)
-            img1 = img1.unsqueeze(0).to(device)
-            img2 = img2.unsqueeze(0).to(device)
-            view1 = base_model(img1)
-            view2 = base_model(img2)
-            img = transforms_original(img).to(device)
-            img = img.unsqueeze(0)
-            res_view = resnet50(img)
-            test1 = view1 - res_view
-            test2 = view2 - res_view
-            test = test1 + test2
-            prediction = classfier_model(test)
-            print(prediction)
 
+    os.makedirs(output_path, exist_ok=True)
+    output_file = os.path.join(output_path, "prediction_result.txt")
 
+    # 结果统计
+    correct = 0
+    total = 0
 
+    with open(output_file, "w") as f_out:
+        for root, dirs, files in os.walk(dataSource):
+            for file in files:
+                if not file.lower().endswith((".jpg", ".jpeg", ".png", ".bmp")):
+                    continue
+                file_path = os.path.join(root, file)
+                # 提取 true label（根目录下的文件夹名）
+                true_label = os.path.basename(os.path.dirname(file_path))
+                # 读取图片
+                img = cv2.imread(file_path, cv2.IMREAD_COLOR)
+                img = cv2.resize(img, (256, 256))
+                # 两种视图输入 base_model
+                img1, img2 = transform(img)
+                img1 = img1.unsqueeze(0).to(device)
+                img2 = img2.unsqueeze(0).to(device)
+                view1 = base_model(img1)
+                view2 = base_model(img2)
+                # 输入 resnet50
+                img_res = transforms_original(img).unsqueeze(0).to(device)
+                res_view = resnet50(img_res)
+                test1 =res_view-view1
+                test2 =res_view-view2
+                test = test1 + test2
+                print(test1)
+                print(test2)
+                print(test)
+
+                prediction = classfier_model(test)
+                print(prediction)
+                pred_class = torch.argmax(prediction, dim=1).item()
+                print(pred_class)
+                pred_class=pred_class+1
+                total += 1
+                if pred_class==int(true_label):
+                    correct = correct+1 # 假设true_label是数字
+
+                # 写入预测结果
+                f_out.write(f"{file},{pred_class},{true_label}\n")
+                print(f"Processed: {file}, Pred: {pred_class}, True: {true_label}")
+
+    print(f"\nFinal Accuracy: {correct/total:.4f} ({correct}/{total})")
 
 
 if __name__ == '__main__':
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_test_for_HR_20250423/0_for_test'  # artbench dataset, classes = 10
-    class_number = 10
-    ssc_output = 2048 #the best
-    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/SSC_20250423/webstyle-62.68/webstyle-SSR-resnet50-2025-04-22-06-36-26-SSC-'
-    output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
+    dataSource = '/home/huangrui/Codes/SubStyleClassfication/train_data/Painting91/test'  # painting91 13
+    class_number = 13 # painting91 13
+    ssc_output = 2048 # the best
+    model_path = '/home/huangrui/Codes/SubStyleClassfication/model/Painting91-SSR-resnet50-2025-05-18-22-14-12-SSC-'
+    output_path = '/home/huangrui/Codes/SubStyleClassfication/data/style_output/painting91'
     SSC_predict(model_path, dataSource, class_number, output_path)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
