@@ -42,6 +42,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     epochs_, batch_size_, offset_bs_, base_lr_, image_size_, classifier_iteration_, classifier_lr_, model_name_ = parameter_load()
     #the training parameters
     # the training parameters
+
     epochs = epochs_
     batch_size = batch_size_
     offset_bs = offset_bs_
