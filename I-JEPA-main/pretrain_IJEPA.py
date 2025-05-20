@@ -38,7 +38,7 @@ class D2VDataModule(pl.LightningDataModule):
     def __init__(self,
                  dataset_path,
                  batch_size=16,
-                 num_workers=4,
+                 num_workers=1,
                  pin_memory=True,
                  shuffle=True
                  ):

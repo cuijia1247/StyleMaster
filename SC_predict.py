@@ -28,7 +28,8 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 ####################################################predict codes#############################
 
-def SSC_predict(model_path, dataSource, class_number, output_path):
+def SSC_predict(model_path, dataSource, class_number, output_path, label):
+    label = label - 1
     base_model = torch.load(model_path+'base-best.pth')
     classfier_model = torch.load(model_path+'classifier-best.pth')
     resnet50 = models.resnet50(pretrained=True)
@@ -50,10 +51,13 @@ def SSC_predict(model_path, dataSource, class_number, output_path):
         transforms.Normalize(norm_mean, norm_std),
     ])
     transform = MultiViewDataInjector([transformT, transformT1])
+    correct = 0
+    total = 0
     for root, dirs, files in os.walk(dataSource):
         for file in files:
+            total += 1
             img = cv2.imread(os.path.join(root, file), cv2.IMREAD_COLOR)
-            img = cv2.resize(img, (256, 256))
+            # img = cv2.resize(img, (256, 256))
             img1, img2 = transform(img)
             img1 = img1.unsqueeze(0).to(device)
             img2 = img2.unsqueeze(0).to(device)
@@ -62,23 +66,39 @@ def SSC_predict(model_path, dataSource, class_number, output_path):
             img = transforms_original(img).to(device)
             img = img.unsqueeze(0)
             res_view = resnet50(img)
-            test1 = view1 - res_view
-            test2 = view2 - res_view
+            test1 = res_view - view1
+            test2 = res_view - view2
             test = test1 + test2
             prediction = classfier_model(test)
-            print(prediction)
+
+            # prediction1 = classfier_model(view1)
+            # prediction2 = classfier_model(view2)
+            pred = prediction.data.max(1, keepdim=True)[1]
+            pred_num = pred.cpu().numpy().sum()
+
+            test = int(pred_num)
+            print('pred_num is {}'.format(test))
+            if test == label:
+                correct  = correct + 1
+            print('test is {}, label is {}'.format(test, label))
+            # pred1 = prediction1.data.max(1, keepdim=True)[1]
+            # pred2 = prediction2.data.max(1, keepdim=True)[1]
+            # print('The pred is {}, {}, {}'.format(pred, pred1, pred2))
+    print('Accuacy is {} / {}'.format(correct, total))
 
 
 
 
 
 if __name__ == '__main__':
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_test_for_HR_20250423/0_for_test'  # artbench dataset, classes = 10
-    class_number = 10
+    label = 6
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/test/' + str(label)  # artbench dataset, classes = 10
+    class_number = 13
     ssc_output = 2048 #the best
-    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/SSC_20250423/webstyle-62.68/webstyle-SSR-resnet50-2025-04-22-06-36-26-SSC-'
+    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.7121848464012146-SSC-'
     output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
-    SSC_predict(model_path, dataSource, class_number, output_path)
+
+    SSC_predict(model_path, dataSource, class_number, output_path, label)
 
 
 

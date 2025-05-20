@@ -69,7 +69,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=True)
     logger.info('SSC ' + dataSource + ' is ready...')
 
     lr = base_lr*batch_size/offset_bs
@@ -207,8 +207,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                     test_accuracy = float(test_correct / len(testset))
                     last_accuracy = test_accuracy
                     if test_accuracy > best_accuracy:  # the current best classifier
-                        lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-classifier-best.pth'
-                        lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-base-best.pth'
+                        lt_classifier_name = model_name_ + '-SSR-resnet50-' + str(test_accuracy) + '-SSC-classifier-best.pth'
+                        lt_base_name = model_name_ + '-SSR-resnet50-' + str(test_accuracy) + '-SSC-base-best.pth'
                         torch.save(model, model_path + lt_base_name)
                         torch.save(classifier, model_path + lt_classifier_name)
                         logger.info(
@@ -234,16 +234,16 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
 if __name__ == '__main__':
     # save_iteration = 1001 #not used for now
     model_path = './model/'
-    # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
+    dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
     # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
     # dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
     # dataSource = './data/Arch/'  # Arch dataset, classes = 25
     # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
-    dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
-    class_number = 10
+    # dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
+    class_number = 13
     ssc_output = 2048 #the best
-    model_name = 'webstyle'
+    model_name = 'painting91'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
