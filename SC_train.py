@@ -200,6 +200,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                         # classifier_optimizer.step()
                         pred = prediction.data.max(1, keepdim=True)[1]
                         correct_ += pred.eq(label.data.view_as(pred)).cpu().sum()
+                        for i in range(len(name)):
+                            print('{} pred is {}, label is {}'.format(name[i], pred[i], label[i]))
                         # correct = idx.eq(label).cpu().sum()
                         test_correct += correct_
 
