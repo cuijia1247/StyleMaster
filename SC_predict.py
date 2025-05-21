@@ -28,7 +28,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 ####################################################predict codes#############################
 
-def SSC_predict(model_path, dataSource, class_number, output_path, label):
+def SSC_predict(model_path, dataSource, label):
     label = label - 1
     base_model = torch.load(model_path+'base-best.pth')
     classfier_model = torch.load(model_path+'classifier-best.pth')
@@ -86,7 +86,7 @@ def SSC_predict(model_path, dataSource, class_number, output_path, label):
             # print('The pred is {}, {}, {}'.format(pred, pred1, pred2))
     print('Accuacy is {} / {}'.format(correct, total))
 
-def SSC_predict_in_batch(model_path, dataSource, class_number, output_path, label):
+def SSC_predict_in_batch(model_path, dataSource):
     # normalize and randomcrop input images
     transformT, transformT1, transformEvalT = get_byol_transforms(64, (0.485, 0.456, 0.406),
                                                                   (0.229, 0.224, 0.225))
@@ -99,7 +99,7 @@ def SSC_predict_in_batch(model_path, dataSource, class_number, output_path, labe
     base_model = torch.load(model_path+'base-best.pth')
     classfier_model = torch.load(model_path+'classifier-best.pth')
     resnet50 = models.resnet50(pretrained=True)
-    resnet50.fc = nn.Linear(2048, ssc_output)
+    resnet50.fc = nn.Linear(2048, 2048)
     base_model = base_model.eval()
     classfier_model = classfier_model.eval()
     resnet50 = resnet50.eval()
@@ -143,14 +143,22 @@ def SSC_predict_in_batch(model_path, dataSource, class_number, output_path, labe
 
 
 if __name__ == '__main__':
-    label = 1
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/test/' + str(label)  # artbench dataset, classes = 10
-    class_number = 13
-    ssc_output = 2048 #the best
-    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/ssc_painting91-72.69/painting91-SSR-resnet50-0.7268907427787781-SSC-'
-    output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
+    # label = 1
+    # dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/test/' + str(label)  # artbench dataset, classes = 10
+    # class_number = 13
+    # ssc_output = 2048 #the best
+    # model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/ssc_painting91-72.69/painting91-SSR-resnet50-0.7268907427787781-SSC-'
+    # output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
+    #
+    # SSC_predict(model_path, dataSource, class_number, output_path, label)
 
-    SSC_predict_in_batch(model_path, dataSource, class_number, output_path, label)
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/' # artbench dataset, classes = 10
+    # class_number = 13
+    # ssc_output = 2048  # the best
+    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/ssc_painting91-72.69/painting91-SSR-resnet50-0.7268907427787781-SSC-'
+    # output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
+
+    SSC_predict_in_batch(model_path, dataSource)
 
 
 
