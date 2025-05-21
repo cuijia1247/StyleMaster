@@ -28,7 +28,7 @@ def parameter_load():
     image_size = 64 #best
     classfier_iteration = 100 #best
     # classfier_iteration = 300  # best
-    classifier_lr = 0.0005 #best
+    classifier_lr = 0.00005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     model_name = ''
     return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name#, classifier_structure
@@ -93,6 +93,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     last_accuracy = 0.0
     for epoch in range(epochs):
         # print('epoch is {}'.format(epoch))
+        print('The model is train()')
+        model.train()
         tk0 = trainloader
         train_loss = []
         # temploss = total_loss / (1860*100)
@@ -128,9 +130,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
             total_loss = 0.0
             style_loss = torch.zeros(1).cuda()
             # logger.info('SSC classifier model is ready...')
-            # model.eval()
+            print('The model is eval()')
+            model.eval()
             # correct = 0.0
             # total_number = len(trainset)
+
             for i in range(classifier_iteration_):
                 trainstyle_loss = []
                 total_correct = 0.0
@@ -200,8 +204,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                         # classifier_optimizer.step()
                         pred = prediction.data.max(1, keepdim=True)[1]
                         correct_ += pred.eq(label.data.view_as(pred)).cpu().sum()
-                        for i in range(len(name)):
-                            print('{} pred is {}, label is {}'.format(name[i], pred[i], label[i]))
+                        # for i in range(len(name)):
+                        #     print('{} pred is {}, label is {}'.format(name[i], pred[i], label[i]))
                         # correct = idx.eq(label).cpu().sum()
                         test_correct += correct_
 
