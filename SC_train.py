@@ -131,8 +131,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
             total_loss = 0.0
             style_loss = torch.zeros(1).cuda()
             # logger.info('SSC classifier model is ready...')
-            print('The model is eval()')
-            model.eval()
+            # print('The model is eval()')
+            # model.eval()
             # correct = 0.0
             # total_number = len(trainset)
 
@@ -229,9 +229,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                         'Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i,
                         test_correct,
                         len(testset), test_accuracy)
-            if model.eval():
-                print('The model is train()')
-                model.train()
+            # if model.eval():
+            #     print('The model is train()')
+            #     model.train()
             total_loss += np.mean(trainstyle_loss)
             # total_loss = total_loss / 50
             if epoch == epochs - 1:

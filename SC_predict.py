@@ -88,11 +88,11 @@ def SSC_predict(model_path, dataSource, label):
 
 def SSC_predict_in_batch(model_path, dataSource):
     # normalize and randomcrop input images
-    transformT, transformT1, transformEvalT = get_byol_transforms(64, (0.485, 0.456, 0.406),
-                                                                  (0.229, 0.224, 0.225))
+    # transformT, transformT1, transformEvalT = get_byol_transforms(64, (0.485, 0.456, 0.406),
+    #                                                               (0.229, 0.224, 0.225))
     # testData = 'test'
     # testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
-    testset = torch.load('my_trainset.pth')
+    testset = torch.load('my_testset.pth')
     testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=True)
     tk2 = testloader
 
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/' # artbench dataset, classes = 10
     # class_number = 13
     # ssc_output = 2048  # the best
-    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.5966386795043945-SSC-'
+    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.6113445162773132-SSC-'
     # output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
 
     SSC_predict_in_batch(model_path, dataSource)
