@@ -86,19 +86,71 @@ def SSC_predict(model_path, dataSource, class_number, output_path, label):
             # print('The pred is {}, {}, {}'.format(pred, pred1, pred2))
     print('Accuacy is {} / {}'.format(correct, total))
 
+def SSC_predict_in_batch(model_path, dataSource, class_number, output_path, label):
+    # normalize and randomcrop input images
+    transformT, transformT1, transformEvalT = get_byol_transforms(64, (0.485, 0.456, 0.406),
+                                                                  (0.229, 0.224, 0.225))
+    testData = 'test'
+    testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
+    testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=True)
+    tk2 = testloader
 
+
+    base_model = torch.load(model_path+'base-best.pth')
+    classfier_model = torch.load(model_path+'classifier-best.pth')
+    resnet50 = models.resnet50(pretrained=True)
+    resnet50.fc = nn.Linear(2048, ssc_output)
+    base_model = base_model.eval()
+    classfier_model = classfier_model.eval()
+    resnet50 = resnet50.eval()
+    base_model = base_model.to(device)
+    classfier_model = classfier_model.to(device)
+    resnet50 = resnet50.to(device)
+
+    correct = 0
+    for view1, view2, label, name, original in tk2:
+        correct_ = 0.0
+        view1 = view1.to(device).detach()
+        view2 = view2.to(device).detach()
+        original = original.to(device)
+        res_view1 = resnet50(original)
+        img1 = base_model(view1)  # only use view 1
+        img2 = base_model(view2)
+        test1 = res_view1 - img1
+        test2 = res_view1 - img2
+        test = test1 + test2
+        prediction = classfier_model(test)
+        # val, idx = prediction.topk(1)
+        # idx = idx.t().squeeze()
+        # idx = idx.cpu().float()
+        # original_label = label
+        # label = label.cpu().float()-1
+        label = label - 1
+        label = Variable(label).cuda()
+        # style_loss = classifier_criterion(prediction, label)
+        # classifier_optimizer.zero_grad()
+        # style_loss.requires_grad_()
+        # style_loss.backward()
+        # classifier_optimizer.step()
+        pred = prediction.data.max(1, keepdim=True)[1]
+        correct_ += pred.eq(label.data.view_as(pred)).cpu().sum()
+        for i in range(len(name)):
+            print('{} pred is {}, label is {}'.format(name[i], pred[i], label[i]))
+        # correct = idx.eq(label).cpu().sum()
+        correct += correct_
+    print('Accuacy is {} / {}'.format(correct, len(testset)))
 
 
 
 if __name__ == '__main__':
-    label = 6
+    label = 1
     dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/test/' + str(label)  # artbench dataset, classes = 10
     class_number = 13
     ssc_output = 2048 #the best
-    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.7121848464012146-SSC-'
+    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/ssc_painting91-72.69/painting91-SSR-resnet50-0.7268907427787781-SSC-'
     output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
 
-    SSC_predict(model_path, dataSource, class_number, output_path, label)
+    SSC_predict_in_batch(model_path, dataSource, class_number, output_path, label)
 
 
 
