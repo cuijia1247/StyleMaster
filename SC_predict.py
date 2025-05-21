@@ -120,6 +120,8 @@ def SSC_predict_in_batch(model_path, dataSource):
         test1 = res_view1 - img1
         test2 = res_view1 - img2
         test = test1 + test2
+        if 'JACKSON_POLLOCK_16.jpg' in name:
+            print(test)
         prediction = classfier_model(test)
         # val, idx = prediction.topk(1)
         # idx = idx.t().squeeze()
@@ -156,7 +158,7 @@ if __name__ == '__main__':
     dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/' # artbench dataset, classes = 10
     # class_number = 13
     # ssc_output = 2048  # the best
-    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.6113445162773132-SSC-'
+    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.5861344337463379-SSC-'
     # output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
 
     SSC_predict_in_batch(model_path, dataSource)
