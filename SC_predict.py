@@ -93,7 +93,7 @@ def SSC_predict_in_batch(model_path, dataSource):
     # testData = 'test'
     # testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
     testset = torch.load('my_testset.pth')
-    testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=True)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=64, shuffle=False)
     tk2 = testloader
 
 
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/' # artbench dataset, classes = 10
     # class_number = 13
     # ssc_output = 2048  # the best
-    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.5966386795043945-SSC-'
+    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.5945377945899963-SSC-'
     # output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
 
     SSC_predict_in_batch(model_path, dataSource)
