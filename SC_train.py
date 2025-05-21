@@ -26,7 +26,7 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 100 #best
+    classfier_iteration = 60 #best
     # classfier_iteration = 300  # best
     classifier_lr = 0.00005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
@@ -71,6 +71,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=True)
+    torch.save(trainset, 'my_trainset.pth')
+    torch.save(testset, 'my_testset.pth')
     logger.info('SSC ' + dataSource + ' is ready...')
 
     lr = base_lr*batch_size/offset_bs
@@ -93,8 +95,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     last_accuracy = 0.0
     for epoch in range(epochs):
         # print('epoch is {}'.format(epoch))
-        print('The model is train()')
-        model.train()
+
         tk0 = trainloader
         train_loss = []
         # temploss = total_loss / (1860*100)
@@ -228,6 +229,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                         'Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i,
                         test_correct,
                         len(testset), test_accuracy)
+            if model.eval():
+                print('The model is train()')
+                model.train()
             total_loss += np.mean(trainstyle_loss)
             # total_loss = total_loss / 50
             if epoch == epochs - 1:
