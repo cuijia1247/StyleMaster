@@ -70,7 +70,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=True)
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=True)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
     torch.save(trainset, 'my_trainset.pth')
     torch.save(testset, 'my_testset.pth')
     logger.info('SSC ' + dataSource + ' is ready...')
