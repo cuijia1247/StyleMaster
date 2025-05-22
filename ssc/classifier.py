@@ -14,19 +14,19 @@ class Classifier(nn.Module):
         self.layer1 = nn.Linear(input_feature, 1024)
         self.layer2 = nn.Linear(1024, 256)
         self.layer3 = nn.Linear(256, class_number)
-        # self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.5)
         self.activation_layer = nn.SiLU()
 
 
     def forward(self, input):
         hidden = self.layer1(input)
         hidden = self.activation_layer(hidden)
-        # if self.training == True:
-        #     hidden = self.dropout(hidden)
+        if self.training == True:
+            hidden = self.dropout(hidden)
         hidden = self.layer2(hidden)
         hidden = self.activation_layer(hidden)
-        # if self.training == True:
-        #     hidden = self.dropout(hidden)
+        if self.training == True:
+            hidden = self.dropout(hidden)
         out = self.layer3(hidden)
         # out = self.activation_layer(hidden)
         return out

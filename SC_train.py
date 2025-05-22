@@ -20,15 +20,35 @@ from ssc.classifier import Classifier
 #setup device for cuda or cpu
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+def make_models(target_layer=4):
+    resnet = models.resnet50(pretrained=True).to(device)
+
+    # 获取模型的特定层的输出
+    layers = [
+        nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1),
+        nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1, resnet.layer2),
+        nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1, resnet.layer2,
+                      resnet.layer3),
+        nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1, resnet.layer2,
+                      resnet.layer3, resnet.layer4, resnet.avgpool),
+    ]
+
+    # if target_layer < 1 or target_layer > 4:
+    #     raise ValueError(f"Invalid target layer: {target_layer}. Target layer should be between 1 and 4.")
+
+    # 截取模型到指定层
+    feature_extractor = nn.Sequential(*layers[target_layer - 1]).eval()
+    return feature_extractor
+
 def parameter_load():
-    epochs = 1000 #best, perhaps6001
+    epochs = 3000 #best, perhaps6001
     batch_size_ = 64
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 60 #best
+    classfier_iteration = 100 #best
     # classfier_iteration = 300  # best
-    classifier_lr = 0.00005 #best
+    classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     model_name = ''
     return epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name#, classifier_structure
@@ -78,10 +98,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
     lr = base_lr*batch_size/offset_bs
     #set up the SSC model
     # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
-    model = SscReg(input_size=2048, output_size=2048, backend='resnet50')
-    resnet50 = models.resnet50(pretrained=True)
-    resnet50.fc = nn.Linear(2048, ssc_output)
-    resnet50 = resnet50.eval()
+    model = SscReg(input_size=2048, output_size=ssc_output, backend='resnet50')
+    # resnet50 = models.resnet50(pretrained=True)
+    # resnet50.fc = nn.Linear(2048, ssc_output)
+    # resnet50 = resnet50.eval()
+    resnet50 = make_models()
     model = model.to(device)
     resnet50 = resnet50.to(device)
     params = model.parameters()
@@ -146,7 +167,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                     view1 = view1.to(device).detach()
                     view2 = view2.to(device).detach()
                     original = original.to(device)
-                    res_view1 = resnet50(original)
+                    res_view1 = resnet50(original).squeeze()
                     img1 = model(view1)  # only use view 1
                     img2 = model(view2)
                     test1 = res_view1 - img1
@@ -184,14 +205,14 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_outp
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
                         original = original.to(device)
-                        res_view1 = resnet50(original)
+                        res_view1 = resnet50(original).squeeze()
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
                         test1 = res_view1 - img1
                         test2 = res_view1 - img2
                         test = test1 + test2
-                        if 'JACKSON_POLLOCK_16.jpg' in name:
-                            print(test)
+                        # if 'JACKSON_POLLOCK_16.jpg' in name:
+                        #     print(test)
                         prediction = classifier(test)
                         # val, idx = prediction.topk(1)
                         # idx = idx.t().squeeze()

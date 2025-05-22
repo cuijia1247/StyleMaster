@@ -100,7 +100,7 @@ def SSC_predict_in_batch(model_path, dataSource):
     base_model = torch.load(model_path+'base-best.pth')
     classfier_model = torch.load(model_path+'classifier-best.pth')
     resnet50 = models.resnet50(pretrained=True)
-    resnet50.fc = nn.Linear(2048, 2048)
+    # resnet50.fc = nn.Linear(2048, 2048)
     # base_model = base_model.eval()
     # classfier_model = classfier_model.eval()
     # resnet50 = resnet50.eval()
