@@ -28,15 +28,36 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 ####################################################predict codes#############################
 
+def make_models(target_layer=4):
+    resnet = models.resnet50(pretrained=True).to(device)
+
+    # 获取模型的特定层的输出
+    layers = [
+        nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1),
+        nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1, resnet.layer2),
+        nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1, resnet.layer2,
+                      resnet.layer3),
+        nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1, resnet.layer2,
+                      resnet.layer3, resnet.layer4, resnet.avgpool),
+    ]
+
+    # if target_layer < 1 or target_layer > 4:
+    #     raise ValueError(f"Invalid target layer: {target_layer}. Target layer should be between 1 and 4.")
+
+    # 截取模型到指定层
+    feature_extractor = nn.Sequential(*layers[target_layer - 1]).eval()
+    return feature_extractor
+
 def SSC_predict(model_path, dataSource, label):
     label = label - 1
     base_model = torch.load(model_path+'base-best.pth')
     classfier_model = torch.load(model_path+'classifier-best.pth')
-    resnet50 = models.resnet50(pretrained=True)
-    resnet50.fc = nn.Linear(2048, ssc_output)
+    # resnet50 = models.resnet50(pretrained=True)
+    # resnet50.fc = nn.Linear(2048, ssc_output)
+    resnet50 = make_models()
     base_model = base_model.eval()
     classfier_model = classfier_model.eval()
-    resnet50 = resnet50.eval()
+    # resnet50 = resnet50.eval()
     base_model = base_model.to(device)
     classfier_model = classfier_model.to(device)
     resnet50 = resnet50.to(device)
@@ -99,7 +120,8 @@ def SSC_predict_in_batch(model_path, dataSource):
 
     base_model = torch.load(model_path+'base-best.pth')
     classfier_model = torch.load(model_path+'classifier-best.pth')
-    resnet50 = models.resnet50(pretrained=True)
+    # resnet50 = models.resnet50(pretrained=True)
+    resnet50 = make_models()
     # resnet50.fc = nn.Linear(2048, 2048)
     # base_model = base_model.eval()
     # classfier_model = classfier_model.eval()
@@ -114,14 +136,14 @@ def SSC_predict_in_batch(model_path, dataSource):
         view1 = view1.to(device).detach()
         view2 = view2.to(device).detach()
         original = original.to(device)
-        res_view1 = resnet50(original)
+        res_view1 = resnet50(original).squeeze()
         img1 = base_model(view1)  # only use view 1
         img2 = base_model(view2)
         test1 = res_view1 - img1
         test2 = res_view1 - img2
         test = test1 + test2
-        if 'JACKSON_POLLOCK_16.jpg' in name:
-            print(test)
+        # if 'JACKSON_POLLOCK_16.jpg' in name:
+        #     print(test)
         prediction = classfier_model(test)
         # val, idx = prediction.topk(1)
         # idx = idx.t().squeeze()
@@ -158,7 +180,7 @@ if __name__ == '__main__':
     dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/' # artbench dataset, classes = 10
     # class_number = 13
     # ssc_output = 2048  # the best
-    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.5945377945899963-SSC-'
+    model_path = '/home/cuijia1247/Codes/SubStyleClassfication/model/painting91-SSR-resnet50-0.7247899174690247-SSC-'
     # output_path = '/home/cuijia1247/Codes/SubStyleClassfication/data/style_output'
 
     SSC_predict_in_batch(model_path, dataSource)
