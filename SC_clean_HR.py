@@ -131,7 +131,7 @@ def process_threshold(similarity_dict, dataSource, output_root, threshold):
             similarity = similarity_dict[file]
             
             try:
-                if similarity < threshold:
+                if similarity > threshold:
                     shutil.copy(img_path, os.path.join(cleaned_dir, file))
                     kept_count += 1
                 else:
@@ -202,12 +202,12 @@ def clean_images_by_similarity(model_path, dataSource, output_root, thresholds):
         print(f"阈值 {threshold}: 保留 {kept} 张, 删除 {deleted} 张, 保留比例 {kept/(kept+deleted):.2%}")
 
 if __name__ == '__main__':
-    dataSource = '/home/huangrui/Codes/SubStyleClassfication/human_cleaned_data/2'
+    dataSource = '/home/huangrui/Codes/SubStyleClassfication/merged_data/2'
     model_path = '/home/huangrui/Codes/SubStyleClassfication/model/pandora-SSR-resnet50-2025-05-23-18-01-31-SSC-'
     output_root = '/home/huangrui/Codes/SubStyleClassfication/uncertain_test'
     
     # 自定义阈值集合
-    thresholds = [0.3, 0.4]  # 可以修改这个列表
+    thresholds = [-0.5,-0.4,-0.3, -0.25, -0.2, -0.15, -0.1,0,0.1,0.2,0.3,0.4,0.5]  # 可以修改这个列表
     
     clean_images_by_similarity(model_path, dataSource, output_root, thresholds)
    
@@ -216,16 +216,3 @@ if __name__ == '__main__':
     print(f"\n原来文件夹中共有 {image_count_before} 张图像")
     
     # # 打印每个阈值的结果
-    # for threshold in thresholds:
-    #     threshold_dir = os.path.join(output_root, str(threshold))
-    #     cleaned_dir = os.path.join(threshold_dir, "cleaned")
-    #     deleted_dir = os.path.join(threshold_dir, "deleted")
-        
-    #     image_count_after = count_images_in_folder(cleaned_dir)
-    #     image_count_del = count_images_in_folder(deleted_dir)
-        
-    #     print(f"\n阈值 {threshold} 结果:")
-    #     print(f"清洗后文件夹中共有 {image_count_after} 张图像")
-    #     print(f"删除了共 {image_count_del} 张图像")
-    #     print(f"保留比例: {image_count_after/(image_count_after+image_count_del):.2%}")
-
