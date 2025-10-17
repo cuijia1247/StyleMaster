@@ -1,5 +1,15 @@
 # Default ignored files
 /shelf/
+/data/
+/data/AVAStyle/*.*
+/data/AVAstyle/*
+/data/Painting91/*
+/data/Pandora/*
+/data/WikiArt3/*
+/data/Arch/*
+/data/FashionStyle14/*
+/data/artbench/*
+/data/webstyle/*
 /workspace.xml
 # Editor-based HTTP Client requests
 /httpRequests/

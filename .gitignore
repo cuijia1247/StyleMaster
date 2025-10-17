@@ -1,3 +1,6 @@
+# Data folder
+data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -127,4 +130,28 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Model checkpoints and outputs
+*.pth
+*.pt
+*.ckpt
+checkpoints/
+outputs/
+results/
+runs/
+
+# Logs
+logs/
+*.log
 
