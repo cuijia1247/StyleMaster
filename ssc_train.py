@@ -27,16 +27,17 @@ def parameter_load():
     batch_size_ = 64
     batch_size_sample = 'None'
     offset_bs = 512
-    base_lr = 0.008 #best
-    image_size = 64 #best
+    # base_lr = 0.008 # best
+    base_lr = 0.08 # current
+    image_size = 64 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 150  # current
+    classfier_iteration = 180  # current
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 74 # current
-    classifier_test_gap = 74 # current
+    classifier_training_gap = 30 # current
+    classifier_test_gap = 30 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -192,7 +193,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     # total_loss += style_loss
                     trainstyle_loss.append(style_loss.item())
                     # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                    if i % 50 == 48: #################need adjust based on performance#####################
+                    if i % 30 == 19: #################need adjust based on performance#####################
                         logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                     len(trainset))
                         # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
@@ -234,10 +235,10 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         test_accuracy = float(test_correct / len(testset))
                         last_accuracy = test_accuracy
                         if test_accuracy > best_accuracy:  # the current best classifier
-                            # Format accuracy to 2 decimal places and replace '.' with '-'
-                            accuracy_str = f"{test_accuracy:.2f}".replace('.', '-')
-                            lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
-                            lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-base-best.pth'
+                            # Format accuracy to 4 decimal places, extract first 4 digits after decimal point
+                            accuracy_str = f"{test_accuracy:.4f}".split('.')[1][:4]
+                            lt_classifier_name = model_name_ + '-SSC-resnet50-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
+                            lt_base_name = model_name_ + '-SSC-resnet50-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-base-best.pth'
                             torch.save(model, model_path + lt_base_name)
                             torch.save(classifier, model_path + lt_classifier_name)
                             logger.info(
@@ -290,7 +291,7 @@ if __name__ == '__main__':
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
     ##########new add 20251018####################
-    iterations = 5
+    iterations = 3
     training_mode = 'original' # 'original' or 'fine-tuning'
     base_model_path = './model/ssc-painting91-SSR-resnet50-2025-10-18-10-10-10-SSC-base-best.pth' # only for the fine-tuning mode
     ##########new add 20251018####################
