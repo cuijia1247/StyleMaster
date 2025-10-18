@@ -41,7 +41,7 @@ def parameter_load():
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
 
-def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_number, iterations):
+def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_number, iterations, training_mode, base_model_path):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.debug('THIS IS THE FORMAL TRAINING PROCESS OF SSC TRAIN')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -78,22 +78,41 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     #normalize and randomcrop input images
     transformT, transformT1, transformEvalT = get_ssc_transforms(image_size, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 
-    #set up the SSC model
-    # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
-    model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
-    resnet50 = models.resnet50(pretrained=True)
-    resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
-    resnet50 = resnet50.eval()
-    model = model.to(device)
-    resnet50 = resnet50.to(device)
-    params = model.parameters()
-    lr = base_lr*batch_size/offset_bs
-    optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
-    # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
-    time_str = current_time
-    best_accuracy = 0.0
-    last_accuracy = 0.0
-    logger.info('SSC model is ready...')
+    if training_mode == 'original':
+        #set up the SSC model
+        # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
+        model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
+        resnet50 = models.resnet50(pretrained=True)
+        resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
+        resnet50 = resnet50.eval()
+        model = model.to(device)
+        resnet50 = resnet50.to(device)
+        params = model.parameters()
+        lr = base_lr*batch_size/offset_bs
+        optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
+        # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
+        time_str = current_time
+        best_accuracy = 0.0
+        last_accuracy = 0.0
+        logger.info('SSC original mode is ready...')
+    else:
+        #set up the SSC model
+        # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
+        # model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
+        model = torch.load(model_path+'base-best.pth')
+        resnet50 = models.resnet50(pretrained=True)
+        resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
+        resnet50 = resnet50.eval()
+        model = model.to(device)
+        resnet50 = resnet50.to(device)
+        params = model.parameters()
+        lr = base_lr*batch_size/offset_bs
+        optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
+        # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
+        time_str = current_time
+        best_accuracy = 0.0
+        last_accuracy = 0.0
+        logger.info('SSC fine-tuning mode is ready...')
 
     for iteration in range(iterations):
         logger.info('The iteration is %d', iteration)
@@ -215,8 +234,10 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         test_accuracy = float(test_correct / len(testset))
                         last_accuracy = test_accuracy
                         if test_accuracy > best_accuracy:  # the current best classifier
-                            lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-SSC-classifier-best.pth'
-                            lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-SSC-base-best.pth'
+                            # Format accuracy to 2 decimal places and replace '.' with '-'
+                            accuracy_str = f"{test_accuracy:.2f}".replace('.', '-')
+                            lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
+                            lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-base-best.pth'
                             torch.save(model, model_path + lt_base_name)
                             torch.save(classifier, model_path + lt_classifier_name)
                             logger.info(
@@ -269,8 +290,11 @@ if __name__ == '__main__':
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
     ##########new add 20251018####################
-    iterations = 10
+    iterations = 5
+    training_mode = 'original' # 'original' or 'fine-tuning'
+    base_model_path = './model/ssc-painting91-SSR-resnet50-2025-10-18-10-10-10-SSC-base-best.pth' # only for the fine-tuning mode
     ##########new add 20251018####################
-    SSCtrain(logger, model_path, current_time, model_name, dataSource, class_number, iterations)
+    SSCtrain(logger, model_path, current_time, model_name, dataSource, class_number, iterations, training_mode, base_model_path)
     logger.removeHandler(filehandler)
     logger.removeHandler(handler)
+    logging.shutdown()
