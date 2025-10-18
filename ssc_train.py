@@ -29,12 +29,14 @@ def parameter_load():
     offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 180 #best
-    # classfier_iteration = 300  # best
+    # classfier_iteration = 180 # best
+    classfier_iteration = 150  # current
     classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
-    classifier_training_gap = 30
-    classifier_test_gap = 30
+    # classifier_training_gap = 30 # best
+    # classifier_test_gap = 30 # best
+    classifier_training_gap = 74 # current
+    classifier_test_gap = 74 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -89,6 +91,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
     # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
     time_str = current_time
+    best_accuracy = 0.0
+    last_accuracy = 0.0
     logger.info('SSC model is ready...')
 
     for iteration in range(iterations):
@@ -103,8 +107,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
         logger.info('SSC ' + dataSource + 'for ' + str(iteration) + ' iterations is ready...')
     
-        best_accuracy = 0.0
-        last_accuracy = 0.0
+
         for epoch in range(epochs):
             # print('epoch is {}'.format(epoch))
             tk0 = trainloader
@@ -170,7 +173,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     # total_loss += style_loss
                     trainstyle_loss.append(style_loss.item())
                     # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                    if i % 20 == 19:
+                    if i % 50 == 48: #################need adjust based on performance#####################
                         logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                     len(trainset))
                         # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
@@ -212,8 +215,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         test_accuracy = float(test_correct / len(testset))
                         last_accuracy = test_accuracy
                         if test_accuracy > best_accuracy:  # the current best classifier
-                            lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-classifier-best.pth'
-                            lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-SSC-base-best.pth'
+                            lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-SSC-classifier-best.pth'
+                            lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-SSC-base-best.pth'
                             torch.save(model, model_path + lt_base_name)
                             torch.save(classifier, model_path + lt_classifier_name)
                             logger.info(
