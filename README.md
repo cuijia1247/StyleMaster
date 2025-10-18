@@ -8,12 +8,20 @@ Thanks for the contribution of code repository list
  * ...
 
 ## Installation
- * CUDA (optional)
- * Pytorch=2.1.0
- * python=3.8.19
-using the commands shown below to install the necessary packages:
-```
+
+**Requirements:**
+- Python 3.8.19
+- PyTorch 2.1.0
+- CUDA (optional, for GPU acceleration)
+
+**Install dependencies:**
+```bash
 pip install -r requirements.txt
+```
+
+## Dataset Setup
+
+Organize your dataset in the following structure:
 ```
 ## Dataset setup
 Dataset - test #the folder for test images with subfolders

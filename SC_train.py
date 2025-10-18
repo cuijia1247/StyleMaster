@@ -55,7 +55,7 @@ def parameter_load():
 
 def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, ssc_output, class_number):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-    logger.debug('THIS IS THE FORMAL TRAINING PROCESS')
+    logger.debug('THIS IS THE FORMAL TRAINING PROCESS OF SC TRAIN')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.info('SSC parameter setting up...')
     # load all the parameters

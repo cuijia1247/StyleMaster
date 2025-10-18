@@ -24,6 +24,36 @@ def criterion(x, y, lmbd = 5e-3, u = 1, v= 1, epsilon = 1e-3): #the base loss co
 
     return loss
 
+def get_ssc_transforms(size, mean, std): #special for SSC training
+    transformT = tr.Compose([
+        transforms.ToTensor(),
+        tr.RandomResizedCrop(size=size, scale=(0.2,0.8), ratio=(3 / 4, 4 / 3)),
+        tr.RandomRotation((-90, 90)),
+        # tr.ColorJitter(),
+        # tr.GaussianBlur(kernel_size=(23,23), sigma=(0.1, 2.0)),
+        # tr.RandomGrayscale(p=0.2),
+        tr.Normalize(mean, std),
+        ])
+
+    transformT1 = tr.Compose([
+        transforms.ToTensor(),
+        tr.RandomResizedCrop(size=size, scale=(0.2,0.8), ratio=(3 / 4, 4 / 3)),
+        tr.RandomRotation((-90, 90)),
+        # tr.ColorJitter(),
+        # tr.RandomGrayscale(p=0.2),
+        # tr.GaussianBlur(kernel_size=(23,23), sigma=(0.1, 2.0)),
+        tr.Normalize(mean, std),
+        ])
+
+    transformEvalT = tr.Compose([
+        transforms.ToTensor(),
+        tr.CenterCrop(size=size),
+        tr.Normalize(mean, std),
+        
+    ])
+
+    return transformT, transformT1, transformEvalT
+
 def get_byol_transforms(size, mean, std):
     transformT = tr.Compose([
         transforms.ToTensor(),
