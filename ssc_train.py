@@ -85,10 +85,10 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     model = model.to(device)
     resnet50 = resnet50.to(device)
     params = model.parameters()
+    lr = base_lr*batch_size/offset_bs
     optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
     # time_str = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
     time_str = current_time
-    lr = base_lr*batch_size/offset_bs
     logger.info('SSC model is ready...')
 
     for iteration in range(iterations):
@@ -101,7 +101,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         testData = 'test'
         testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
         testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
-        logger.info('SSC ' + dataSource + 'for ' + iteration + ' iterations is ready...')
+        logger.info('SSC ' + dataSource + 'for ' + str(iteration) + ' iterations is ready...')
     
         best_accuracy = 0.0
         last_accuracy = 0.0
