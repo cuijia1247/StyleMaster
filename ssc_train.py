@@ -19,7 +19,7 @@ from ssc.classifier import Classifier
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 200 #best, perhaps6001
+    epochs = 210 #best, perhaps6001
     backbone = 'resnet50'
     ssc_backend = 'resnet50'
     ssc_input = 2048
@@ -28,7 +28,7 @@ def parameter_load():
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
-    base_lr = 0.08 # current
+    base_lr = 0.01 # current
     image_size = 64 # best
     # classfier_iteration = 180 # best
     classfier_iteration = 180  # current
@@ -36,7 +36,7 @@ def parameter_load():
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 30 # current
+    classifier_training_gap = 20 # current
     classifier_test_gap = 30 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
@@ -193,7 +193,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     # total_loss += style_loss
                     trainstyle_loss.append(style_loss.item())
                     # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                    if i % 30 == 19: #################need adjust based on performance#####################
+                    if i % 30 == 29: #################need adjust based on performance#####################
                         logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                     len(trainset))
                         # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
