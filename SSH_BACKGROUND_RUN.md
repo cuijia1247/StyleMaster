@@ -42,7 +42,7 @@ cd /home/cuijia1247/Codes/SubStyleClassfication
 - `run_ssc_background.sh` - 后台运行脚本（支持本地模型加载）
 - `manage_ssc.sh` - 训练管理脚本
 - `ssc_train_transformer.py` - 主训练脚本（已配置使用cuda:1，支持本地模型）
-- `pretrainModels/swin_base_patch4_window7_224.pth` - 本地预训练模型文件
+- `pretrainModels/vit_small_patch16_224.pth` - 本地预训练模型文件
 
 ## 🔧 详细使用方法
 
@@ -126,7 +126,7 @@ grep "accuracy" ./log/ssc_background_*.log
 1. **环境要求**: 确保conda环境`vicreg`已正确安装所有依赖
 2. **GPU配置**: 脚本已配置使用`cuda:1`设备
 3. **存储空间**: 确保有足够的磁盘空间存储模型和日志
-4. **本地模型**: 确保 `./pretrainModels/swin_base_patch4_window7_224.pth` 文件存在
+4. **本地模型**: 确保 `./pretrainModels/vit_small_patch16_224.pth` 文件存在
 5. **离线运行**: 脚本完全离线运行，无需网络连接
 6. **模型兼容性**: 本地模型已适配为backbone特征提取器
 
@@ -137,10 +137,10 @@ grep "accuracy" ./log/ssc_background_*.log
 
 ```bash
 # 检查本地模型文件是否存在
-ls -la ./pretrainModels/swin_base_patch4_window7_224.pth
+ls -la ./pretrainModels/vit_small_patch16_224.pth
 
 # 如果文件不存在，请确保模型文件已正确放置
-# 模型文件应该位于: ./pretrainModels/swin_base_patch4_window7_224.pth
+# 模型文件应该位于: ./pretrainModels/vit_small_patch16_224.pth
 ```
 
 ### 训练无法启动
@@ -153,7 +153,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 ls -la run_ssc_background.sh manage_ssc.sh
 
 # 检查本地模型文件
-ls -la pretrainModels/swin_base_patch4_window7_224.pth
+ls -la pretrainModels/vit_small_patch16_224.pth
 ```
 
 ### 训练意外停止
@@ -182,7 +182,7 @@ kill -9 $(cat ssc_train.pid)
 2. 所有依赖包是否已安装
 3. GPU是否可用
 4. 磁盘空间是否充足
-5. 本地模型文件是否存在 (`./pretrainModels/swin_base_patch4_window7_224.pth`)
+5. 本地模型文件是否存在 (`./pretrainModels/vit_small_patch16_224.pth`)
 6. 日志文件中的错误信息
 
 ## 🔄 更新日志
@@ -191,3 +191,4 @@ kill -9 $(cat ssc_train.pid)
 - **2024-10-19**: 支持本地模型加载，移除网络依赖
 - **2024-10-19**: 添加完整的训练管理功能
 - **2024-10-19**: 修复网络下载bug，实现完全离线运行
+- **2025-10-19**: 将Swin Transformer替换为ViT-small/16模型

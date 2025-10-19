@@ -31,7 +31,7 @@ class MLP(nn.Module):
 
 class SscReg(nn.Module):
     def __init__(self,
-    backend = 'swin_small_patch4_window7_224',
+    backend = 'vit_small_patch16_224',
     input_size = 2048,
     output_size = 8192,
     depth_projector = 3,
@@ -41,12 +41,12 @@ class SscReg(nn.Module):
         super().__init__()
         
         if not TIMM_AVAILABLE:
-            raise ImportError("timm library is required for Swin Transformer. Please install it with: pip install timm")
+            raise ImportError("timm library is required for ViT Transformer. Please install it with: pip install timm")
         
         # 检查并下载预训练模型
         self._ensure_pretrained_model(backend, pretrain_models_dir, pretrained_backend)
         
-        # Use Swin Transformer as backend - 优先使用本地模型
+        # Use ViT Transformer as backend - 优先使用本地模型
         self.backend = timm.create_model(backend, pretrained=False, num_classes=0)  # num_classes=0 to get features only
         
         # 尝试加载本地预训练权重
@@ -69,14 +69,14 @@ class SscReg(nn.Module):
             print(f"⚠️  本地模型文件不存在: {model_path}")
             print("使用随机初始化权重")
         
-        # Get the feature dimension from the Swin Transformer
+        # Get the feature dimension from the ViT Transformer
         with torch.no_grad():
             dummy_input = torch.randn(1, 3, 224, 224)
-            swin_features = self.backend(dummy_input)
-            swin_feature_dim = swin_features.shape[1]
+            vit_features = self.backend(dummy_input)
+            vit_feature_dim = vit_features.shape[1]
         
         # Add a linear layer to match the expected input_size for the projector
-        self.feature_adapter = nn.Linear(swin_feature_dim, input_size)
+        self.feature_adapter = nn.Linear(vit_feature_dim, input_size)
         
         # Keep the same projector as original
         self.projector = MLP(input_size=input_size, output_size=output_size, depth=depth_projector)
@@ -96,7 +96,7 @@ class SscReg(nn.Module):
             print("将使用随机初始化权重")
     
     def forward(self, x):
-        # Extract features using Swin Transformer
+        # Extract features using ViT Transformer
         x = self.backend(x)
         # Adapt features to match expected input_size
         x = self.feature_adapter(x)

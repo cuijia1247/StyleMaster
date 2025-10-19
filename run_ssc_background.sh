@@ -49,7 +49,7 @@ if [ "$CONDA_DEFAULT_ENV" != "vicreg" ]; then
 fi
 
 # 检查本地模型文件
-MODEL_FILE="pretrainModels/swin_base_patch4_window7_224.pth"
+MODEL_FILE="pretrainModels/vit_small_patch16_224.pth"
 if [ ! -f "$MODEL_FILE" ]; then
     echo "错误: 本地模型文件不存在: $MODEL_FILE"
     echo "请确保模型文件已正确放置"

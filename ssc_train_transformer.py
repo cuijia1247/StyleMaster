@@ -28,10 +28,10 @@ device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('
 
 def parameter_load():
     epochs = 210 #best, perhaps6001
-    backbone = 'swin_base_patch4_window7_224'
-    ssc_backend = 'swin_base_patch4_window7_224'
-    ssc_input = 1024
-    ssc_output = 1024
+    backbone = 'vit_small_patch16_224'
+    ssc_backend = 'vit_small_patch16_224'
+    ssc_input = 384  # ViT-small输出384维
+    ssc_output = 384  # 保持384维输出
     batch_size_ = 24
     batch_size_sample = 'None'
     offset_bs = 512
@@ -44,8 +44,8 @@ def parameter_load():
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 30 # current
-    classifier_test_gap = 30 # current
+    classifier_training_gap = 10 # current
+    classifier_test_gap = 10 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -95,11 +95,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         model = model.to(device)
         
         # 从SscReg模型中提取backbone用于特征提取，并添加feature_adapter来输出2048维特征
-        swin_backbone = model.backend
+        vit_backbone = model.backend
         feature_adapter = model.feature_adapter
-        swin_transformer = nn.Sequential(swin_backbone, feature_adapter)
-        swin_transformer = swin_transformer.eval()  # 设置为评估模式
-        swin_transformer = swin_transformer.to(device)
+        vit_transformer = nn.Sequential(vit_backbone, feature_adapter)
+        vit_transformer = vit_transformer.eval()  # 设置为评估模式
+        vit_transformer = vit_transformer.to(device)
         
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
@@ -116,27 +116,28 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         model = torch.load(model_path+'base-best.pth')
         if TIMM_AVAILABLE:
             # 使用本地预训练模型，避免网络下载
-            swin_backbone = timm.create_model('swin_small_patch4_window7_224', pretrained=False, num_classes=0)  # num_classes=0 to get features only
+            vit_backbone = timm.create_model('vit_small_patch16_224', pretrained=False, num_classes=0)  # num_classes=0 to get features only
             # 加载本地预训练权重
-            local_model_path = 'pretrainModels/swin_small_patch4_window7_224.pth'
+            local_model_path = 'pretrainModels/vit_small_patch16_224.pth'
             if os.path.exists(local_model_path):
                 print(f"加载本地预训练模型: {local_model_path}")
-                state_dict = torch.load(local_model_path, map_location='cpu')
-                # 移除分类器权重，只保留backbone特征提取器
-                backbone_state_dict = {k: v for k, v in state_dict.items() if not k.startswith('head')}
-                swin_backbone.load_state_dict(backbone_state_dict, strict=False)
+                checkpoint = torch.load(local_model_path, map_location='cpu')
+                if 'model_state_dict' in checkpoint:
+                    vit_backbone.load_state_dict(checkpoint['model_state_dict'], strict=False)
+                else:
+                    vit_backbone.load_state_dict(checkpoint, strict=False)
                 print("本地模型加载成功")
             else:
                 print(f"警告: 本地模型文件不存在 {local_model_path}，使用随机初始化权重")
             
-            # 添加feature_adapter来将1024维特征转换为2048维
-            # feature_adapter = nn.Linear(1024, ssc_output_)  # Swin base输出1024维，转换为2048维
-            swin_transformer = nn.Sequential(swin_backbone, feature_adapter)
+            # 添加feature_adapter来将384维特征转换为2048维
+            feature_adapter = nn.Linear(384, ssc_output_)  # ViT-small输出384维，转换为2048维
+            vit_transformer = nn.Sequential(vit_backbone, feature_adapter)
         else:
-            raise ImportError("timm library is required for Swin Transformer. Please install it with: pip install timm")
-        swin_transformer = swin_transformer.eval()
+            raise ImportError("timm library is required for ViT Transformer. Please install it with: pip install timm")
+        vit_transformer = vit_transformer.eval()
         model = model.to(device)
-        swin_transformer = swin_transformer.to(device)
+        vit_transformer = vit_transformer.to(device)
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
         optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
@@ -190,7 +191,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # correct = 0.0
                 # total_number = len(trainset)
                 for i in range(classifier_iteration_):
-                    # print(i)
+                    print(i)
                     trainstyle_loss = []
                     total_correct = 0.0
                     tk1 = trainloader
@@ -200,7 +201,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
                         original = original.to(device)
-                        backbone_view = swin_transformer(original)
+                        backbone_view = vit_transformer(original)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
 
@@ -240,7 +241,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             view1 = view1.to(device).detach()
                             view2 = view2.to(device).detach()
                             original = original.to(device)
-                            backbone_view = swin_transformer(original)
+                            backbone_view = vit_transformer(original)
                             img1 = model(view1)  # only use view 1
                             img2 = model(view2)
                             test1 = backbone_view - img1
