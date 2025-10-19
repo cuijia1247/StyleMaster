@@ -1,4 +1,4 @@
-# ssc new training code after 20250425
+# ssc transformer training code after 20250425
 # Author: cuijia1247
 # Date: 2024-7-19
 # version: 1.0
@@ -10,18 +10,25 @@ import torch.optim as optim
 import torchvision.models as models
 from torch.autograd import Variable
 import numpy as np
-from ssc.Sscreg import SscReg
+from ssc.Sscreg_transformer import SscReg
 from ssc.utils import criterion, get_ssc_transforms, MultiViewDataInjector
 from SscDataSet import SscDataset
 from ssc.classifier import Classifier
+
+try:
+    import timm
+    TIMM_AVAILABLE = True
+except ImportError:
+    TIMM_AVAILABLE = False
+    print("Warning: timm library not available. Please install it with: pip install timm")
 
 #setup device for cuda or cpu
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
     epochs = 210 #best, perhaps6001
-    backbone = 'resnet50'
-    ssc_backend = 'resnet50'
+    backbone = 'swin_base_patch4_window7_224'
+    ssc_backend = 'swin_base_patch4_window7_224'
     ssc_input = 2048
     ssc_output = 2048
     batch_size_ = 64
@@ -44,7 +51,7 @@ def parameter_load():
 
 def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_number, iterations, training_mode, base_model_path):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
-    logger.debug('THIS IS THE FORMAL TRAINING PROCESS OF SSC TRAIN')
+    logger.debug('THIS IS THE FORMAL TRAINING PROCESS OF SSC TRAIN WITH TRANSFORMER')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.info('SSC parameter setting up...')
     # load all the parameters
@@ -81,13 +88,15 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
 
     if training_mode == 'original':
         #set up the SSC model
-        # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
-        model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
-        resnet50 = models.resnet50(pretrained=True)
-        resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
-        resnet50 = resnet50.eval()
+        # model = SscReg(input_size=2048, output_size = 2048, backend='swin_base_patch4_window7_224')
+        model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_, pretrained_backend=True)
+        if TIMM_AVAILABLE:
+            swin_transformer = timm.create_model('swin_base_patch4_window7_224', pretrained=True, num_classes=ssc_output_)
+        else:
+            raise ImportError("timm library is required for Swin Transformer. Please install it with: pip install timm")
+        swin_transformer = swin_transformer.eval()
         model = model.to(device)
-        resnet50 = resnet50.to(device)
+        swin_transformer = swin_transformer.to(device)
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
         optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
@@ -98,14 +107,16 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         logger.info('SSC original mode is ready...')
     else:
         #set up the SSC model
-        # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
+        # model = SscReg(input_size=2048, output_size = 2048, backend='swin_base_patch4_window7_224')
         # model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
         model = torch.load(model_path+'base-best.pth')
-        resnet50 = models.resnet50(pretrained=True)
-        resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
-        resnet50 = resnet50.eval()
+        if TIMM_AVAILABLE:
+            swin_transformer = timm.create_model('swin_base_patch4_window7_224', pretrained=True, num_classes=ssc_output_)
+        else:
+            raise ImportError("timm library is required for Swin Transformer. Please install it with: pip install timm")
+        swin_transformer = swin_transformer.eval()
         model = model.to(device)
-        resnet50 = resnet50.to(device)
+        swin_transformer = swin_transformer.to(device)
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
         optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
@@ -167,7 +178,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
                         original = original.to(device)
-                        backbone_view = resnet50(original)
+                        backbone_view = swin_transformer(original)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
                         test1 = backbone_view - img1
@@ -206,7 +217,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             view1 = view1.to(device).detach()
                             view2 = view2.to(device).detach()
                             original = original.to(device)
-                            backbone_view = resnet50(original)
+                            backbone_view = swin_transformer(original)
                             img1 = model(view1)  # only use view 1
                             img2 = model(view2)
                             test1 = backbone_view - img1
@@ -237,8 +248,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         if test_accuracy > best_accuracy:  # the current best classifier
                             # Format accuracy to 4 decimal places, extract first 4 digits after decimal point
                             accuracy_str = f"{test_accuracy:.4f}".split('.')[1][:4]
-                            lt_classifier_name = model_name_ + '-SSC-resnet50-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
-                            lt_base_name = model_name_ + '-SSC-resnet50-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-base-best.pth'
+                            lt_classifier_name = model_name_ + '-SSC-transformer-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
+                            lt_base_name = model_name_ + '-SSC-transformer-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-base-best.pth'
                             torch.save(model, model_path + lt_base_name)
                             torch.save(classifier, model_path + lt_classifier_name)
                             logger.info(
@@ -253,8 +264,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 total_loss += np.mean(trainstyle_loss)
                 total_loss = total_loss / 50
                 if epoch == epochs - 1 and iteration == iterations - 1:
-                    lt_classifier_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-SSC-classifier-last.pth'
-                    lt_base_name = model_name_ + '-SSR-resnet50-' + time_str + '-iteration-' + str(iteration) + '-SSC-base-last.pth'
+                    lt_classifier_name = model_name_ + '-SSR-transformer-' + time_str + '-iteration-' + str(iteration) + '-SSC-classifier-last.pth'
+                    lt_base_name = model_name_ + '-SSR-transformer-' + time_str + '-iteration-' + str(iteration) + '-SSC-base-last.pth'
                     torch.save(model, model_path + lt_base_name)
                     torch.save(classifier, model_path + lt_classifier_name)
                     logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
@@ -276,7 +287,7 @@ if __name__ == '__main__':
     dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/'  # the '/' is necessary
     class_number = 13
     # ssc_output = 2048 #the best
-    model_name = 'ssc-painting91'
+    model_name = 'ssc-painting91-transformer'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
@@ -293,7 +304,7 @@ if __name__ == '__main__':
     ##########new add 20251018####################
     iterations = 3
     training_mode = 'original' # 'original' or 'fine-tuning'
-    base_model_path = './model/ssc-painting91-SSR-resnet50-2025-10-18-10-10-10-SSC-base-best.pth' # only for the fine-tuning mode
+    base_model_path = './model/ssc-painting91-SSR-transformer-2025-10-18-10-10-10-SSC-base-best.pth' # only for the fine-tuning mode
     ##########new add 20251018####################
     SSCtrain(logger, model_path, current_time, model_name, dataSource, class_number, iterations, training_mode, base_model_path)
     logger.removeHandler(filehandler)
