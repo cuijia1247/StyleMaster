@@ -44,7 +44,7 @@ def parameter_load():
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 15 # current
+    classifier_training_gap = 1 # current
     classifier_test_gap = 30 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
@@ -93,6 +93,13 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         # SscReg类会自动处理本地模型加载，无需网络下载
         model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_, pretrained_backend=False)
         model = model.to(device)
+        
+        # 从SscReg模型中提取backbone用于特征提取，并添加feature_adapter来输出2048维特征
+        swin_backbone = model.backend
+        feature_adapter = model.feature_adapter
+        swin_transformer = nn.Sequential(swin_backbone, feature_adapter)
+        swin_transformer = swin_transformer.eval()  # 设置为评估模式
+        
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
         optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
@@ -108,7 +115,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         model = torch.load(model_path+'base-best.pth')
         if TIMM_AVAILABLE:
             # 使用本地预训练模型，避免网络下载
-            swin_transformer = timm.create_model('swin_base_patch4_window7_224', pretrained=False, num_classes=ssc_output_)
+            swin_backbone = timm.create_model('swin_base_patch4_window7_224', pretrained=False, num_classes=0)  # num_classes=0 to get features only
             # 加载本地预训练权重
             local_model_path = 'pretrainModels/swin_base_patch4_window7_224.pth'
             if os.path.exists(local_model_path):
@@ -116,10 +123,14 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 state_dict = torch.load(local_model_path, map_location='cpu')
                 # 移除分类器权重，只保留backbone特征提取器
                 backbone_state_dict = {k: v for k, v in state_dict.items() if not k.startswith('head')}
-                swin_transformer.load_state_dict(backbone_state_dict, strict=False)
+                swin_backbone.load_state_dict(backbone_state_dict, strict=False)
                 print("本地模型加载成功")
             else:
                 print(f"警告: 本地模型文件不存在 {local_model_path}，使用随机初始化权重")
+            
+            # 添加feature_adapter来将1024维特征转换为2048维
+            feature_adapter = nn.Linear(1024, ssc_output_)  # Swin base输出1024维，转换为2048维
+            swin_transformer = nn.Sequential(swin_backbone, feature_adapter)
         else:
             raise ImportError("timm library is required for Swin Transformer. Please install it with: pip install timm")
         swin_transformer = swin_transformer.eval()
@@ -166,7 +177,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
                 # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
                 # train the style classifier every 500 iterations
-            if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
+            # if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
+            if epoch % classifier_training_gap_ == 0:
                 classifier = Classifier(ssc_output_, class_number).to(device)
                 classifier_criterion = nn.CrossEntropyLoss()
                 classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
@@ -189,6 +201,17 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         backbone_view = swin_transformer(original)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
+                        
+                        # # 打印特征维度信息
+                        # print(f"backbone_view shape: {backbone_view.shape}")
+                        # print(f"img1 shape: {img1.shape}")
+                        # print(f"img2 shape: {img2.shape}")
+                        # print(f"backbone_view dtype: {backbone_view.dtype}")
+                        # print(f"img1 dtype: {img1.dtype}")
+                        # print(f"img2 dtype: {img2.dtype}")
+                        # print("-" * 50)
+                        
+                        # import pdb; pdb.set_trace()  # 调试断点：第206行
                         test1 = backbone_view - img1
                         test2 = backbone_view - img2
                         test = test1 + test2
