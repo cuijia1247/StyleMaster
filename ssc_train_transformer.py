@@ -27,20 +27,20 @@ except ImportError:
 device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 210 #best, perhaps6001
+    epochs = 150 #best, perhaps6001
     backbone = 'vit_small_patch16_224'
     ssc_backend = 'vit_small_patch16_224'
-    ssc_input = 384  # ViT-small输出384维
-    ssc_output = 384  # 保持384维输出
-    batch_size_ = 24
+    ssc_input = 1024  # 1024
+    ssc_output = 1024  # 1024
+    batch_size_ = 64
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
-    base_lr = 0.005 # current
+    base_lr = 0.0005 # current
     image_size = 224 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 210  # current
-    classifier_lr = 0.0004 #best
+    classfier_iteration = 200  # current
+    classifier_lr = 0.05 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
@@ -179,8 +179,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
                 # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
                 # train the style classifier every 500 iterations
-            # if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
-            if epoch % classifier_training_gap_ == 0:
+            if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
+            # if epoch % classifier_training_gap_ == 0:
                 classifier = Classifier(ssc_output_, class_number).to(device)
                 classifier_criterion = nn.CrossEntropyLoss()
                 classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
@@ -191,7 +191,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # correct = 0.0
                 # total_number = len(trainset)
                 for i in range(classifier_iteration_):
-                    print(i)
+                    # print(i)
                     trainstyle_loss = []
                     total_correct = 0.0
                     tk1 = trainloader
@@ -201,13 +201,13 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
                         original = original.to(device)
-                        backbone_view = vit_transformer(original)
+                        # backbone_view = vit_transformer(original)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
 
-                        test1 = backbone_view - img1
-                        test2 = backbone_view - img2
-                        test = test1 + test2
+                        # test1 = backbone_view - img1
+                        # test2 = backbone_view - img2
+                        test = img1 + img2
                         prediction = classifier(test)
                         # val, idx = prediction.topk(1)
                         # idx = idx.t().squeeze()
@@ -241,12 +241,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             view1 = view1.to(device).detach()
                             view2 = view2.to(device).detach()
                             original = original.to(device)
-                            backbone_view = vit_transformer(original)
+                            # backbone_view = vit_transformer(original)
                             img1 = model(view1)  # only use view 1
                             img2 = model(view2)
-                            test1 = backbone_view - img1
-                            test2 = backbone_view - img2
-                            test = test1 + test2
+                            # test1 = backbone_view - img1
+                            # test2 = test1 - img2
+                            test = img1 + img2
                             prediction = classifier(test)
                             # val, idx = prediction.topk(1)
                             # idx = idx.t().squeeze()
@@ -269,7 +269,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         #             test_correct, len(testset), float(test_correct/len(testset))))
                         test_accuracy = float(test_correct / len(testset))
                         last_accuracy = test_accuracy
-                        if test_accuracy > best_accuracy:  # the current best classifier
+                        if test_accuracy > best_accuracy and test_accuracy > 0.4:  # the current best classifier
                             # Format accuracy to 4 decimal places, extract first 4 digits after decimal point
                             accuracy_str = f"{test_accuracy:.4f}".split('.')[1][:4]
                             lt_classifier_name = model_name_ + '-SSC-transformer-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
