@@ -31,7 +31,7 @@ class MLP(nn.Module):
 
 class SscReg(nn.Module):
     def __init__(self,
-    backend = 'vit_small_patch16_224',
+    backend = 'vit_large_patch16_224',
     input_size = 2048,
     output_size = 8192,
     depth_projector = 3,

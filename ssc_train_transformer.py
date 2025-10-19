@@ -28,11 +28,11 @@ device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('
 
 def parameter_load():
     epochs = 150 #best, perhaps6001
-    backbone = 'vit_small_patch16_224'
-    ssc_backend = 'vit_small_patch16_224'
+    backbone = 'vit_large_patch16_224'
+    ssc_backend = 'vit_large_patch16_224'
     ssc_input = 1024  # 1024
     ssc_output = 1024  # 1024
-    batch_size_ = 64
+    batch_size_ = 32
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
@@ -116,9 +116,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         model = torch.load(model_path+'base-best.pth')
         if TIMM_AVAILABLE:
             # 使用本地预训练模型，避免网络下载
-            vit_backbone = timm.create_model('vit_small_patch16_224', pretrained=False, num_classes=0)  # num_classes=0 to get features only
+            vit_backbone = timm.create_model('vit_large_patch16_224', pretrained=False, num_classes=0)  # num_classes=0 to get features only
             # 加载本地预训练权重
-            local_model_path = 'pretrainModels/vit_small_patch16_224.pth'
+            local_model_path = 'pretrainModels/vit_large_patch16_224.pth'
             if os.path.exists(local_model_path):
                 print(f"加载本地预训练模型: {local_model_path}")
                 checkpoint = torch.load(local_model_path, map_location='cpu')
@@ -130,8 +130,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
             else:
                 print(f"警告: 本地模型文件不存在 {local_model_path}，使用随机初始化权重")
             
-            # 添加feature_adapter来将384维特征转换为2048维
-            feature_adapter = nn.Linear(384, ssc_output_)  # ViT-small输出384维，转换为2048维
+            # 添加feature_adapter来将1024维特征转换为2048维
+            feature_adapter = nn.Linear(1024, ssc_output_)  # ViT-large输出1024维，转换为2048维
             vit_transformer = nn.Sequential(vit_backbone, feature_adapter)
         else:
             raise ImportError("timm library is required for ViT Transformer. Please install it with: pip install timm")
@@ -191,7 +191,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # correct = 0.0
                 # total_number = len(trainset)
                 for i in range(classifier_iteration_):
-                    # print(i)
+                    print(i)
                     trainstyle_loss = []
                     total_correct = 0.0
                     tk1 = trainloader
@@ -201,13 +201,13 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
                         original = original.to(device)
-                        # backbone_view = vit_transformer(original)
+                        backbone_view = vit_transformer(original)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
 
-                        # test1 = backbone_view - img1
-                        # test2 = backbone_view - img2
-                        test = img1 + img2
+                        test1 = backbone_view - img1
+                        test2 = backbone_view - img2
+                        test = test1 + test2
                         prediction = classifier(test)
                         # val, idx = prediction.topk(1)
                         # idx = idx.t().squeeze()
@@ -241,12 +241,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             view1 = view1.to(device).detach()
                             view2 = view2.to(device).detach()
                             original = original.to(device)
-                            # backbone_view = vit_transformer(original)
+                            backbone_view = vit_transformer(original)
                             img1 = model(view1)  # only use view 1
                             img2 = model(view2)
-                            # test1 = backbone_view - img1
-                            # test2 = test1 - img2
-                            test = img1 + img2
+                            test1 = backbone_view - img1
+                            test2 = backbone_view - img2
+                            test = test1 + test2
                             prediction = classifier(test)
                             # val, idx = prediction.topk(1)
                             # idx = idx.t().squeeze()

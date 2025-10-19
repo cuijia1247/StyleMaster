@@ -33,6 +33,21 @@ The demo dataset can be found in the following folder
 
 
 ## Model
+
+### ViT-based SSC Model (当前使用)
+```python
+from ssc.Sscreg_transformer import SscReg
+
+# 使用ViT-large/16作为backbone
+model = SscReg(
+    backend='vit_large_patch16_224',
+    input_size=1024,
+    output_size=1024,
+    depth_projector=3,
+    pretrained_backend=False)
+```
+
+### ResNet-based SSC Model (旧版)
 ```python
 from ssc.Sscreg import SscReg
 
@@ -42,8 +57,12 @@ model = SscReg(
     output_size=256,
     depth_projector=3,
     pretrained_backend=False)
-   
 ```
+
+**模型特性：**
+- 当前使用 ViT-large/16 作为backbone
+- 基座模型输出维度：1024
+- 支持本地预训练模型加载，完全离线运行
 
 
 
