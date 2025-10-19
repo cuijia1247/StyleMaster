@@ -1,7 +1,7 @@
 # ssc transformer training code after 20250425
 # Author: cuijia1247
-# Date: 2024-7-19
-# version: 1.0
+# Date: 2025-10-19
+# version: 2.0
 import logging
 import os
 import time
