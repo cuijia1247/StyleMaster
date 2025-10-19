@@ -22,8 +22,8 @@ except ImportError:
     TIMM_AVAILABLE = False
     print("Warning: timm library not available. Please install it with: pip install timm")
 
-#setup device for cuda or cpu
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+#setup device for cuda:1 or cpu
+device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
     epochs = 210 #best, perhaps6001
@@ -159,11 +159,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
                 # train the style classifier every 500 iterations
             if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
-                classifier = Classifier(ssc_output_, class_number).cuda()
+                classifier = Classifier(ssc_output_, class_number).to(device)
                 classifier_criterion = nn.CrossEntropyLoss()
                 classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
                 total_loss = 0.0
-                style_loss = torch.zeros(1).cuda()
+                style_loss = torch.zeros(1).to(device)
                 # logger.info('SSC classifier model is ready...')
                 # model.eval()
                 # correct = 0.0
@@ -191,7 +191,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         # original_label = label
                         # label = label.cpu().float()-1
                         label = label - 1
-                        label = Variable(label).cuda()
+                        label = Variable(label).to(device)
                         style_loss = classifier_criterion(prediction, label)
                         classifier_optimizer.zero_grad()
                         # style_loss.requires_grad_()
@@ -230,7 +230,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             # original_label = label
                             # label = label.cpu().float()-1
                             label = label - 1
-                            label = Variable(label).cuda()
+                            label = Variable(label).to(device)
                             # style_loss = classifier_criterion(prediction, label)
                             # classifier_optimizer.zero_grad()
                             # style_loss.requires_grad_()
