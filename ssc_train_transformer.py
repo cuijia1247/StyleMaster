@@ -27,25 +27,25 @@ except ImportError:
 device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 150 #best, perhaps6001
+    epochs = 120 #best, perhaps6001
     backbone = 'vit_large_patch16_224'
-    ssc_backend = 'vit_large_patch16_224'
+    ssc_backend = 'resnet50'
     ssc_input = 1024  # 1024
     ssc_output = 1024  # 1024
-    batch_size_ = 32
+    batch_size_ = 8
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
     base_lr = 0.0005 # current
     image_size = 224 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 200  # current
+    classfier_iteration = 120  # current
     classifier_lr = 0.05 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 10 # current
-    classifier_test_gap = 10 # current
+    classifier_training_gap = 30 # current
+    classifier_test_gap = 30 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -95,11 +95,16 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         model = model.to(device)
         
         # 从SscReg模型中提取backbone用于特征提取，并添加feature_adapter来输出2048维特征
-        vit_backbone = model.backend
-        feature_adapter = model.feature_adapter
-        vit_transformer = nn.Sequential(vit_backbone, feature_adapter)
-        vit_transformer = vit_transformer.eval()  # 设置为评估模式
-        vit_transformer = vit_transformer.to(device)
+        # vit_backbone = model.backend
+        # feature_adapter = model.feature_adapter
+        # vit_transformer = nn.Sequential(vit_backbone, feature_adapter)
+        # vit_transformer = vit_transformer.eval()  # 设置为评估模式
+        # vit_transformer = vit_transformer.to(device)
+        resnet50 = models.resnet50(pretrained=True)
+        # resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
+        resnet50 = resnet50.eval()
+        # model = model.to(device)
+        resnet50 = resnet50.to(device)
         
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
@@ -201,7 +206,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
                         original = original.to(device)
-                        backbone_view = vit_transformer(original)
+                        backbone_view = resnet50(original)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
 
@@ -241,7 +246,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             view1 = view1.to(device).detach()
                             view2 = view2.to(device).detach()
                             original = original.to(device)
-                            backbone_view = vit_transformer(original)
+                            backbone_view = resnet50(original)
                             img1 = model(view1)  # only use view 1
                             img2 = model(view2)
                             test1 = backbone_view - img1
