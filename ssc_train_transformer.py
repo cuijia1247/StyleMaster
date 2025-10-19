@@ -24,20 +24,20 @@ def parameter_load():
     backbone = 'resnet50'
     ssc_backend = 'resnet50'
     ssc_input = 2048
-    ssc_output = 1024
+    ssc_output = 2048
     batch_size_ = 64
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
-    base_lr = 0.0005 # current
+    base_lr = 0.008 # current
     image_size = 64 # best
     # classfier_iteration = 180 # best
     classfier_iteration = 210  # current
-    classifier_lr = 0.0001 #best
+    classifier_lr = 0.0004 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 15 # current
+    classifier_training_gap = 30 # current
     classifier_test_gap = 30 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
@@ -84,11 +84,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         #set up the SSC model
         # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
         model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
+        model = model.to(device)
         resnet50 = models.resnet50(pretrained=True)
         resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
         resnet50 = resnet50.eval()
-        model = model.to(device)
         resnet50 = resnet50.to(device)
+
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
         optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
@@ -238,8 +239,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         if test_accuracy > best_accuracy and test_accuracy > 0.45:  # the current best classifier
                             # Format accuracy to 4 decimal places, extract first 4 digits after decimal point
                             accuracy_str = f"{test_accuracy:.4f}".split('.')[1][:4]
-                            lt_classifier_name = model_name_ + '-SSC-VIT-L/16-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
-                            lt_base_name = model_name_ + '-SSC-VIT-L/16-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-base-best.pth'
+                            lt_classifier_name = model_name_ + '-SSC-VIT-L-16-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
+                            lt_base_name = model_name_ + '-SSC-VIT-L-16-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-base-best.pth'
                             torch.save(model, model_path + lt_base_name)
                             torch.save(classifier, model_path + lt_classifier_name)
                             logger.info(
@@ -254,8 +255,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 total_loss += np.mean(trainstyle_loss)
                 total_loss = total_loss / 50
                 if epoch == epochs - 1 and iteration == iterations - 1:
-                    lt_classifier_name = model_name_ + '-SSC-VIT-L/16-' + time_str + '-iteration-' + str(iteration) + '-SSC-classifier-last.pth'
-                    lt_base_name = model_name_ + '-SSC-VIT-L/16-' + time_str + '-iteration-' + str(iteration) + '-SSC-base-last.pth'
+                    lt_classifier_name = model_name_ + '-SSC-VIT-L-16-' + time_str + '-iteration-' + str(iteration) + '-SSC-classifier-last.pth'
+                    lt_base_name = model_name_ + '-SSC-VIT-L-16-' + time_str + '-iteration-' + str(iteration) + '-SSC-base-last.pth'
                     torch.save(model, model_path + lt_base_name)
                     torch.save(classifier, model_path + lt_classifier_name)
                     logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
