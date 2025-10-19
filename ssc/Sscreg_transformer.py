@@ -31,7 +31,15 @@ class SscReg(nn.Module):
     pretrained_backend=True):
 
         super().__init__()
-        self.backend = timm.create_model(backend, pretrained=pretrained_backend, num_classes=0)
+        # Create model without pretrained weights first
+        self.backend = timm.create_model(backend, pretrained=False, num_classes=0)
+        
+        # Load pretrained weights from local file if requested
+        if pretrained_backend:
+            pretrained_path = 'pretrainModels/vit_large_patch16_224.pth'
+            state_dict = torch.load(pretrained_path, map_location='cpu')
+            self.backend.load_state_dict(state_dict, strict=False)
+        
         self.projector = MLP(input_size=input_size, output_size=output_size, depth=depth_projector)
     
     def forward(self, x):
