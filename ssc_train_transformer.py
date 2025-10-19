@@ -37,7 +37,7 @@ def parameter_load():
     offset_bs = 512
     # base_lr = 0.008 # best
     base_lr = 0.009 # current
-    image_size = 64 # best
+    image_size = 224 # best
     # classfier_iteration = 180 # best
     classfier_iteration = 210  # current
     classifier_lr = 0.0004 #best
@@ -157,7 +157,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 view2 = view2.to(device)
                 fx = model(view1)
                 fx1 = model(view2)
-                loss = criterion(fx, fx1)
+                loss = criterion(fx, fx1, device=device)
                 train_loss.append(loss.item())
                 optimizer.zero_grad()
                 loss.backward()
