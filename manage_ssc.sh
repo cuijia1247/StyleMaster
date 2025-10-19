@@ -162,7 +162,7 @@ list_processes() {
     echo "----------------------------------------"
     
     # 查找Python训练进程
-    ps aux | grep -E "(ssc_train_transformer|python.*ssc)" | grep -v grep || echo "没有找到SSC训练进程"
+    ps aux | grep -E "(ssc_train_transformer\.py|python.*ssc_train_transformer)" | grep -v grep || echo "没有找到SSC训练进程"
     
     echo ""
     echo "GPU进程:"

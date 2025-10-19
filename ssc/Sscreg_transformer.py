@@ -46,16 +46,28 @@ class SscReg(nn.Module):
         # 检查并下载预训练模型
         self._ensure_pretrained_model(backend, pretrain_models_dir, pretrained_backend)
         
-        # Use Swin Transformer as backend
-        try:
-            self.backend = timm.create_model(backend, pretrained=pretrained_backend, num_classes=0)  # num_classes=0 to get features only
-        except Exception as e:
-            if pretrained_backend:
-                print(f"⚠️  无法加载预训练模型 {backend}: {str(e)}")
-                print("尝试使用未预训练的模型...")
-                self.backend = timm.create_model(backend, pretrained=False, num_classes=0)
-            else:
-                raise e
+        # Use Swin Transformer as backend - 优先使用本地模型
+        self.backend = timm.create_model(backend, pretrained=False, num_classes=0)  # num_classes=0 to get features only
+        
+        # 尝试加载本地预训练权重
+        model_path = os.path.join(pretrain_models_dir, f"{backend}.pth")
+        if os.path.exists(model_path):
+            print(f"加载本地预训练模型: {model_path}")
+            try:
+                checkpoint = torch.load(model_path, map_location='cpu')
+                if 'model_state_dict' in checkpoint:
+                    # 新格式：包含model_state_dict的checkpoint
+                    self.backend.load_state_dict(checkpoint['model_state_dict'], strict=False)
+                else:
+                    # 旧格式：直接是state_dict
+                    self.backend.load_state_dict(checkpoint, strict=False)
+                print("✅ 本地预训练模型加载成功")
+            except Exception as e:
+                print(f"⚠️  本地模型加载失败: {str(e)}")
+                print("使用随机初始化权重")
+        else:
+            print(f"⚠️  本地模型文件不存在: {model_path}")
+            print("使用随机初始化权重")
         
         # Get the feature dimension from the Swin Transformer
         with torch.no_grad():
@@ -70,42 +82,18 @@ class SscReg(nn.Module):
         self.projector = MLP(input_size=input_size, output_size=output_size, depth=depth_projector)
     
     def _ensure_pretrained_model(self, backend, pretrain_models_dir, pretrained_backend):
-        """检查并下载预训练模型到指定目录"""
-        if not pretrained_backend:
-            return  # 如果不需要预训练模型，直接返回
-        
+        """检查本地预训练模型是否存在"""
         # 确保目录存在
         os.makedirs(pretrain_models_dir, exist_ok=True)
         
         # 检查模型文件是否存在
         model_path = os.path.join(pretrain_models_dir, f"{backend}.pth")
         
-        if not os.path.exists(model_path):
-            print(f"预训练模型 {backend} 不存在，开始下载...")
-            print(f"保存路径: {os.path.abspath(model_path)}")
-            
-            try:
-                # 创建模型并加载预训练权重
-                model = timm.create_model(backend, pretrained=True, num_classes=0)
-                
-                # 保存模型
-                torch.save({
-                    'model_state_dict': model.state_dict(),
-                    'model_name': backend,
-                    'num_features': model.num_features if hasattr(model, 'num_features') else model.head.in_features
-                }, model_path)
-                
-                print(f"✅ 成功下载并保存: {model_path}")
-                
-                # 清理内存
-                del model
-                torch.cuda.empty_cache() if torch.cuda.is_available() else None
-                
-            except Exception as e:
-                print(f"❌ 下载失败 {backend}: {str(e)}")
-                print("将使用在线预训练权重...")
+        if os.path.exists(model_path):
+            print(f"✅ 本地预训练模型已存在: {model_path}")
         else:
-            print(f"✅ 预训练模型已存在: {model_path}")
+            print(f"⚠️  本地预训练模型不存在: {model_path}")
+            print("将使用随机初始化权重")
     
     def forward(self, x):
         # Extract features using Swin Transformer

@@ -3,6 +3,7 @@
 # Date: 2024-7-19
 # version: 1.0
 import logging
+import os
 import time
 import torch
 from torch import nn
@@ -89,14 +90,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
     if training_mode == 'original':
         #set up the SSC model
         # model = SscReg(input_size=2048, output_size = 2048, backend='swin_base_patch4_window7_224')
-        model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_, pretrained_backend=True)
-        if TIMM_AVAILABLE:
-            swin_transformer = timm.create_model('swin_base_patch4_window7_224', pretrained=True, num_classes=ssc_output_)
-        else:
-            raise ImportError("timm library is required for Swin Transformer. Please install it with: pip install timm")
-        swin_transformer = swin_transformer.eval()
+        # SscReg类会自动处理本地模型加载，无需网络下载
+        model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_, pretrained_backend=False)
         model = model.to(device)
-        swin_transformer = swin_transformer.to(device)
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
         optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
@@ -111,7 +107,19 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         # model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
         model = torch.load(model_path+'base-best.pth')
         if TIMM_AVAILABLE:
-            swin_transformer = timm.create_model('swin_base_patch4_window7_224', pretrained=True, num_classes=ssc_output_)
+            # 使用本地预训练模型，避免网络下载
+            swin_transformer = timm.create_model('swin_base_patch4_window7_224', pretrained=False, num_classes=ssc_output_)
+            # 加载本地预训练权重
+            local_model_path = 'pretrainModels/swin_base_patch4_window7_224.pth'
+            if os.path.exists(local_model_path):
+                print(f"加载本地预训练模型: {local_model_path}")
+                state_dict = torch.load(local_model_path, map_location='cpu')
+                # 移除分类器权重，只保留backbone特征提取器
+                backbone_state_dict = {k: v for k, v in state_dict.items() if not k.startswith('head')}
+                swin_transformer.load_state_dict(backbone_state_dict, strict=False)
+                print("本地模型加载成功")
+            else:
+                print(f"警告: 本地模型文件不存在 {local_model_path}，使用随机初始化权重")
         else:
             raise ImportError("timm library is required for Swin Transformer. Please install it with: pip install timm")
         swin_transformer = swin_transformer.eval()
