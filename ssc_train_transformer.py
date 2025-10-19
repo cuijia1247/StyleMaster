@@ -10,6 +10,7 @@ import torch.optim as optim
 import torchvision.models as models
 from torch.autograd import Variable
 import numpy as np
+import timm
 # from ssc.Sscreg import SscReg
 from ssc.Sscreg_transformer import SscReg
 from ssc.utils import criterion, get_ssc_transforms, MultiViewDataInjector
@@ -21,8 +22,8 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 def parameter_load():
     epochs = 210 #best, perhaps6001
-    backbone = 'resnet50'
-    ssc_backend = 'resnet50'
+    backbone = 'vit_large_patch16_224'
+    ssc_backend = 'vit_large_patch16_224'
     ssc_input = 2048
     ssc_output = 2048
     batch_size_ = 64
@@ -85,10 +86,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
         model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
         model = model.to(device)
-        resnet50 = models.resnet50(pretrained=True)
-        resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
-        resnet50 = resnet50.eval()
-        resnet50 = resnet50.to(device)
+        vitTransformer = timm.create_model('vit_large_patch16_224', pretrained=False, num_classes=0)
+        state_dict = torch.load('pretrainModels/vit_large_patch16_224.pth', map_location='cpu')
+        vitTransformer.load_state_dict(state_dict, strict=False)
+        vitTransformer.fc = nn.Linear(ssc_input_, ssc_output_)
+        vitTransformer = resnet50.eval()
+        vitTransformer = resnet50.to(device)
 
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
@@ -169,7 +172,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
                         original = original.to(device)
-                        backbone_view = resnet50(original)
+                        backbone_view = vitTransformer(original)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
                         test1 = backbone_view - img1
@@ -208,7 +211,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             view1 = view1.to(device).detach()
                             view2 = view2.to(device).detach()
                             original = original.to(device)
-                            backbone_view = resnet50(original)
+                            backbone_view = vitTransformer(original)
                             img1 = model(view1)  # only use view 1
                             img2 = model(view2)
                             test1 = backbone_view - img1
