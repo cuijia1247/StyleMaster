@@ -31,7 +31,7 @@ def parameter_load():
     ssc_backend = 'swin_base_patch4_window7_224'
     ssc_input = 2048
     ssc_output = 2048
-    batch_size_ = 64
+    batch_size_ = 32
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
