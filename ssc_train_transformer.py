@@ -30,13 +30,13 @@ def parameter_load():
     epochs = 210 #best, perhaps6001
     backbone = 'swin_base_patch4_window7_224'
     ssc_backend = 'swin_base_patch4_window7_224'
-    ssc_input = 2048
-    ssc_output = 2048
-    batch_size_ = 32
+    ssc_input = 1024
+    ssc_output = 1024
+    batch_size_ = 24
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
-    base_lr = 0.009 # current
+    base_lr = 0.005 # current
     image_size = 224 # best
     # classfier_iteration = 180 # best
     classfier_iteration = 210  # current
@@ -44,7 +44,7 @@ def parameter_load():
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 1 # current
+    classifier_training_gap = 30 # current
     classifier_test_gap = 30 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
@@ -99,6 +99,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         feature_adapter = model.feature_adapter
         swin_transformer = nn.Sequential(swin_backbone, feature_adapter)
         swin_transformer = swin_transformer.eval()  # 设置为评估模式
+        swin_transformer = swin_transformer.to(device)
         
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
@@ -115,9 +116,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         model = torch.load(model_path+'base-best.pth')
         if TIMM_AVAILABLE:
             # 使用本地预训练模型，避免网络下载
-            swin_backbone = timm.create_model('swin_base_patch4_window7_224', pretrained=False, num_classes=0)  # num_classes=0 to get features only
+            swin_backbone = timm.create_model('swin_small_patch4_window7_224', pretrained=False, num_classes=0)  # num_classes=0 to get features only
             # 加载本地预训练权重
-            local_model_path = 'pretrainModels/swin_base_patch4_window7_224.pth'
+            local_model_path = 'pretrainModels/swin_small_patch4_window7_224.pth'
             if os.path.exists(local_model_path):
                 print(f"加载本地预训练模型: {local_model_path}")
                 state_dict = torch.load(local_model_path, map_location='cpu')
@@ -129,7 +130,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 print(f"警告: 本地模型文件不存在 {local_model_path}，使用随机初始化权重")
             
             # 添加feature_adapter来将1024维特征转换为2048维
-            feature_adapter = nn.Linear(1024, ssc_output_)  # Swin base输出1024维，转换为2048维
+            # feature_adapter = nn.Linear(1024, ssc_output_)  # Swin base输出1024维，转换为2048维
             swin_transformer = nn.Sequential(swin_backbone, feature_adapter)
         else:
             raise ImportError("timm library is required for Swin Transformer. Please install it with: pip install timm")
@@ -189,6 +190,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # correct = 0.0
                 # total_number = len(trainset)
                 for i in range(classifier_iteration_):
+                    # print(i)
                     trainstyle_loss = []
                     total_correct = 0.0
                     tk1 = trainloader
@@ -201,17 +203,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         backbone_view = swin_transformer(original)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
-                        
-                        # # 打印特征维度信息
-                        # print(f"backbone_view shape: {backbone_view.shape}")
-                        # print(f"img1 shape: {img1.shape}")
-                        # print(f"img2 shape: {img2.shape}")
-                        # print(f"backbone_view dtype: {backbone_view.dtype}")
-                        # print(f"img1 dtype: {img1.dtype}")
-                        # print(f"img2 dtype: {img2.dtype}")
-                        # print("-" * 50)
-                        
-                        # import pdb; pdb.set_trace()  # 调试断点：第206行
+
                         test1 = backbone_view - img1
                         test2 = backbone_view - img2
                         test = test1 + test2

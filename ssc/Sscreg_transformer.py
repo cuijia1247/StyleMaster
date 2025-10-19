@@ -31,7 +31,7 @@ class MLP(nn.Module):
 
 class SscReg(nn.Module):
     def __init__(self,
-    backend = 'swin_base_patch4_window7_224',
+    backend = 'swin_small_patch4_window7_224',
     input_size = 2048,
     output_size = 8192,
     depth_projector = 3,
