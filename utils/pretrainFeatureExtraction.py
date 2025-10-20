@@ -233,13 +233,13 @@ def load_dataFeatures(feature_path):
     
     # Extract feature dictionary
     feature_dict = data['feature_dict']
-    feature_dim = data['feature_dim']
-    num_samples = data['num_samples']
+    # feature_dim = data['feature_dim']
+    # num_samples = data['num_samples']
     
-    print(f"Successfully loaded features:")
-    print(f"  - Number of samples: {num_samples}")
-    print(f"  - Feature dimension: {feature_dim}")
-    print(f"  - Sample filenames (first 5): {list(feature_dict.keys())[:5]}")
+    # print(f"Successfully loaded features:")
+    # print(f"  - Number of samples: {num_samples}")
+    # print(f"  - Feature dimension: {feature_dim}")
+    # print(f"  - Sample filenames (first 5): {list(feature_dict.keys())[:5]}")
     
     return feature_dict
 
@@ -313,11 +313,11 @@ def main():
     直接在此函数内配置所有参数，无需命令行传参。
     """
     # ==================== 参数配置区域 ====================
-    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/train/'  # 数据目录路径
+    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/test/'  # 数据目录路径
     model_name = 'vit_large_patch16_224'  # ViT模型名称
     pretrained_path = 'pretrainModels/vit_large_patch16_224.pth'  # 预训练权重路径
     output_dir = 'pretrainFeatures'  # 输出特征保存目录
-    dataset_name = 'Painting91_vit_train'  # 数据集名称
+    dataset_name = 'Painting91_vit_test'  # 数据集名称
     feature_dim = 1024  # 期望的特征维度
     batch_size = 64  # 批处理大小
     image_size = 224  # 输入图像尺寸
@@ -374,28 +374,28 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
+    main()
     
     # ==================== 使用 load_dataFeatures 的示例 ====================
     # 如果需要加载已保存的特征，可以取消下面代码的注释：
     # 
-    feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_vit_train_features.pkl'
-    feature_dict = load_dataFeatures(feature_path)
+    # feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_vit_train_features.pkl'
+    # feature_dict = load_dataFeatures(feature_path)
     
-    print('\n' + '='*80)
-    print('feature loading DONE.')
-    print(f"Total features: {len(feature_dict)}")
+    # print('\n' + '='*80)
+    # print('feature loading DONE.')
+    # print(f"Total features: {len(feature_dict)}")
     
-    # 示例：通过文件名获取特征
-    print('\n示例：通过文件名访问特征向量（新格式：只包含文件名.后缀）')
-    print('-'*80)
-    sample_filenames = list(feature_dict.keys())[:5]
-    for filename in sample_filenames:
-        feature = feature_dict[filename]
-        print(f"  文件名: {filename}")
-        print(f"  特征形状: {feature.shape}")
-        print(f"  特征前5个值: {feature[:5]}")
-        print()
-    print('='*80)
+    # # 示例：通过文件名获取特征
+    # print('\n示例：通过文件名访问特征向量（新格式：只包含文件名.后缀）')
+    # print('-'*80)
+    # sample_filenames = list(feature_dict.keys())[:5]
+    # for filename in sample_filenames:
+    #     feature = feature_dict[filename]
+    #     print(f"  文件名: {filename}")
+    #     print(f"  特征形状: {feature.shape}")
+    #     print(f"  特征前5个值: {feature[:5]}")
+    #     print()
+    # print('='*80)
     # ======================================================================
 

@@ -134,8 +134,10 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
         logger.info('SSC ' + dataSource + 'for ' + str(iteration) + ' iterations is ready...')
 
-        feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_vit_train_features.pkl'
-        feature_dict = load_dataFeatures(feature_path)
+        train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_vit_train_features.pkl'
+        train_feature_dict = load_dataFeatures(train_feature_path)
+        test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_vit_test_features.pkl'
+        test_feature_dict = load_dataFeatures(test_feature_path)
     
 
         for epoch in range(epochs):
@@ -172,14 +174,18 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     total_correct = 0.0
                     tk1 = trainloader
                     tk2 = testloader
-                    for view1, view2, label, name, original in tk1:
+                    for view1, view2, label, names, original in tk1:
                         correct = 0.0
                         view1 = view1.to(device0).detach()
                         view2 = view2.to(device0).detach()
-                        original = original.to(device1)
+                        # original = original.to(device1)
                         # backbone_view = vitTransformer(original)
                         # backbone_view = model.backend(original)
-                        backbone_view = feature_dict[name]
+                        feature_list = []
+                        for name in names:
+                            feature_list.append(train_feature_dict[name])
+                        # Stack features into a tensor and move to the correct device
+                        backbone_view = torch.stack(feature_list, dim=0).to(device0)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
                         test1 = backbone_view - img1
@@ -213,14 +219,18 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     if i % classifier_test_gap_ == classifier_test_gap_ - 1:
                         test_correct = 0.0
                         classifier.eval()
-                        for view1, view2, label, name, original in tk2:
+                        for view1, view2, label, names_, original in tk2:
                             correct_ = 0.0
                             view1 = view1.to(device0).detach()
                             view2 = view2.to(device0).detach()
                             original = original.to(device1)
                             # backbone_view = vitTransformer(original)
                             # backbone_view = model.backend(original)
-                            backbone_view = feature_dict[name]
+                            feature_list = []
+                            for name_ in names_:
+                                feature_list.append(test_feature_dict[name_])
+                            # Stack features into a tensor and move to the correct device
+                            backbone_view = torch.stack(feature_list, dim=0).to(device0)
                             img1 = model(view1)  # only use view 1
                             img2 = model(view2)
                             test1 = backbone_view - img1
