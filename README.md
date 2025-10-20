@@ -70,3 +70,5 @@ model = SscReg(
 ```
 waiting for our new released paper citation
 ```
+
+在utils/文件夹下建立新的脚本imageFeatureExtraction.py, 对指定的数据库文件夹（/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/）读取所有jpg或png文件，通过指定的基线模型（vit_large_patch16_224）进行特征提取，提取指定维度的特征（1024）和文件名，并将其存储为pth文件，放入pretrainFeatures文件夹。

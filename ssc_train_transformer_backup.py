@@ -16,7 +16,6 @@ from ssc.Sscreg_transformer import SscReg
 from ssc.utils import criterion, get_ssc_transforms, MultiViewDataInjector
 from SscDataSet import SscDataset
 from ssc.classifier import Classifier
-from utils.pretrainFeatureExtraction import load_dataFeatures
 
 #setup device for cuda or cpu
 device0 = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
@@ -40,8 +39,8 @@ def parameter_load():
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 1 # current
-    classifier_test_gap = 1 # current
+    classifier_training_gap = 10 # current
+    classifier_test_gap = 10 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -133,9 +132,6 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
         testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
         logger.info('SSC ' + dataSource + 'for ' + str(iteration) + ' iterations is ready...')
-
-        feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_vit_train_features.pkl'
-        feature_dict = load_dataFeatures(feature_path)
     
 
         for epoch in range(epochs):
@@ -177,9 +173,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         view1 = view1.to(device0).detach()
                         view2 = view2.to(device0).detach()
                         original = original.to(device1)
-                        # backbone_view = vitTransformer(original)
+                        backbone_view = vitTransformer(original)
                         # backbone_view = model.backend(original)
-                        backbone_view = feature_dict[name]
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
                         test1 = backbone_view - img1
@@ -218,9 +213,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             view1 = view1.to(device0).detach()
                             view2 = view2.to(device0).detach()
                             original = original.to(device1)
-                            # backbone_view = vitTransformer(original)
+                            backbone_view = vitTransformer(original)
                             # backbone_view = model.backend(original)
-                            backbone_view = feature_dict[name]
                             img1 = model(view1)  # only use view 1
                             img2 = model(view2)
                             test1 = backbone_view - img1
