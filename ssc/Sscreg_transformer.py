@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import timm
 
 class MLP(nn.Module):
@@ -28,7 +29,8 @@ class SscReg(nn.Module):
     input_size = 1024,
     output_size = 8192,
     depth_projector = 3,
-    pretrained_backend=True):
+    pretrained_backend=True,
+    target_size = 224):
 
         super().__init__()
         # Create model without pretrained weights first
@@ -41,8 +43,14 @@ class SscReg(nn.Module):
             self.backend.load_state_dict(state_dict, strict=False)
         
         self.projector = MLP(input_size=input_size, output_size=output_size, depth=depth_projector)
+        self.target_size = target_size
     
     def forward(self, x):
+        # 插值到目标尺寸 (默认 224x224)
+        if x.shape[2] != self.target_size or x.shape[3] != self.target_size:
+            x = F.interpolate(x, size=(self.target_size, self.target_size), 
+                            mode='bilinear', align_corners=False)
+        
         x = self.backend(x)
         x = self.projector(x)
         return x

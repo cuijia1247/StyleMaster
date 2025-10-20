@@ -23,25 +23,25 @@ device0 = torch.device('cuda:0') if torch.cuda.is_available() else torch.device(
 device1 = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 210 #best, perhaps6001
+    epochs = 200 #best, perhaps6001
     backbone = 'vit_large_patch16_224'
     ssc_backend = 'vit_large_patch16_224'
     ssc_input = 1024
     ssc_output = 1024
-    batch_size_ = 8
+    batch_size_ = 16
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
     base_lr = 0.008 # current
-    image_size = 224 # best
+    image_size = 64 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 210  # current
+    classfier_iteration = 180  # current
     classifier_lr = 0.0004 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 1 # current
-    classifier_test_gap = 1 # current
+    classifier_training_gap = 30 # current
+    classifier_test_gap = 30 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -88,12 +88,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
         model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
         model = model.to(device0)
-        vitTransformer = timm.create_model('vit_large_patch16_224', pretrained=False, num_classes=0)
-        state_dict = torch.load('pretrainModels/vit_large_patch16_224.pth', map_location='cpu')
-        vitTransformer.load_state_dict(state_dict, strict=False)
-        vitTransformer.fc = nn.Linear(ssc_input_, ssc_output_)
-        vitTransformer = vitTransformer.eval()
-        vitTransformer = vitTransformer.to(device1)
+        # vitTransformer = timm.create_model('vit_large_patch16_224', pretrained=False, num_classes=0)
+        # state_dict = torch.load('pretrainModels/vit_large_patch16_224.pth', map_location='cpu')
+        # vitTransformer.load_state_dict(state_dict, strict=False)
+        # vitTransformer.fc = nn.Linear(ssc_input_, ssc_output_)
+        # vitTransformer = vitTransformer.eval()
+        # vitTransformer = vitTransformer.to(device1)
 
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
@@ -160,7 +160,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
                 # train the style classifier every 500 iterations
             if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
-                classifier = Classifier(ssc_output_, class_number).to(device1)
+                classifier = Classifier(ssc_output_, class_number).to(device0)
                 classifier_criterion = nn.CrossEntropyLoss()
                 classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
                 total_loss = 0.0
