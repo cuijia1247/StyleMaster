@@ -14,9 +14,10 @@ from ssc.Sscreg import SscReg
 from ssc.utils import criterion, get_ssc_transforms, MultiViewDataInjector
 from SscDataSet import SscDataset
 from ssc.classifier import Classifier
+from utils.pretrainFeatureExtraction import load_dataFeatures
 
 #setup device for cuda or cpu
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
     epochs = 210 #best, perhaps6001
@@ -83,11 +84,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         #set up the SSC model
         # model = SscReg(input_size=2048, output_size = 2048, backend='resnet50')
         model = SscReg(input_size=ssc_input_, output_size=ssc_output_, backend=ssc_backend_)
-        resnet50 = models.resnet50(pretrained=True)
-        resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
-        resnet50 = resnet50.eval()
+        # resnet50 = models.resnet50(pretrained=True)
+        # resnet50.fc = nn.Linear(ssc_input_, ssc_output_)
+        # resnet50 = resnet50.eval()
         model = model.to(device)
-        resnet50 = resnet50.to(device)
+        # resnet50 = resnet50.to(device)
         params = model.parameters()
         lr = base_lr*batch_size/offset_bs
         optimizer = optim.SGD(params, lr=lr, weight_decay=1.5e-6)
@@ -114,6 +115,11 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         best_accuracy = 0.0
         last_accuracy = 0.0
         logger.info('SSC fine-tuning mode is ready...')
+
+    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_resnet50_train_features.pkl'
+    train_feature_dict = load_dataFeatures(train_feature_path)
+    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_resnet50_test_features.pkl'
+    test_feature_dict = load_dataFeatures(test_feature_path)
 
     for iteration in range(iterations):
         logger.info('The iteration is %d', iteration)
@@ -162,12 +168,17 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     total_correct = 0.0
                     tk1 = trainloader
                     tk2 = testloader
-                    for view1, view2, label, name, original in tk1:
+                    for view1, view2, label, names, original in tk1:
                         correct = 0.0
                         view1 = view1.to(device).detach()
                         view2 = view2.to(device).detach()
-                        original = original.to(device)
-                        backbone_view = resnet50(original)
+                        # original = original.to(device)
+                        # backbone_view = resnet50(original)
+                        feature_list = []
+                        for name in names:
+                            feature_list.append(train_feature_dict[name])
+                        # Stack features into a tensor and move to the correct device
+                        backbone_view = torch.stack(feature_list, dim=0).to(device)
                         img1 = model(view1)  # only use view 1
                         img2 = model(view2)
                         test1 = backbone_view - img1
@@ -201,12 +212,17 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     if i % classifier_test_gap_ == classifier_test_gap_ - 1:
                         test_correct = 0.0
                         classifier.eval()
-                        for view1, view2, label, name, original in tk2:
+                        for view1, view2, label, names, original in tk2:
                             correct_ = 0.0
                             view1 = view1.to(device).detach()
                             view2 = view2.to(device).detach()
-                            original = original.to(device)
-                            backbone_view = resnet50(original)
+                            # original = original.to(device)
+                            # backbone_view = resnet50(original)
+                            feature_list = []
+                            for name in names:
+                                feature_list.append(train_feature_dict[name])
+                            # Stack features into a tensor and move to the correct device
+                            backbone_view = torch.stack(feature_list, dim=0).to(device)
                             img1 = model(view1)  # only use view 1
                             img2 = model(view2)
                             test1 = backbone_view - img1
