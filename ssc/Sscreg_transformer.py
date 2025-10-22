@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import timm
+from ssc.Backend import *
+
+availableBackends = {'resnet18':resnet18, 'resnet34':resnet34, 'resnet50':resnet50, 'resnet101':resnet101,'resnet152':resnet152}
 
 class MLP(nn.Module):
     def __init__(self,
@@ -33,15 +36,24 @@ class SscReg(nn.Module):
     target_size = 224):
 
         super().__init__()
-        # Create model without pretrained weights first
-        self.backend = timm.create_model(backend, pretrained=False, num_classes=0)
+        
         
         # Load pretrained weights from local file if requested
-        if pretrained_backend:
+        if backend == 'swin_base_patch4_window7_224':
+            # Create model without pretrained weights first
+            self.backend = timm.create_model(backend, pretrained=False, num_classes=0)
             pretrained_path = 'pretrainModels/swin_base_patch4_window7_224.pth'
             state_dict = torch.load(pretrained_path, map_location='cpu')
             self.backend.load_state_dict(state_dict, strict=False)
-        
+        elif backend == 'resnet50':
+            self.backend = availableBackends[backend](pretrained=pretrained_backend)
+        elif backend == 'vit_large_patch16_224':
+            # Create model without pretrained weights first
+            self.backend = timm.create_model(backend, pretrained=False, num_classes=0)
+            pretrained_path = 'pretrainModels/vit_large_patch16_224.pth'
+            state_dict = torch.load(pretrained_path, map_location='cpu')
+            self.backend.load_state_dict(state_dict, strict=False)
+            
         self.projector = MLP(input_size=input_size, output_size=output_size, depth=depth_projector)
         self.target_size = target_size
     
