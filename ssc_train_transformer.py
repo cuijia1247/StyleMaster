@@ -263,8 +263,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         if test_accuracy > best_accuracy and test_accuracy > 0.45:  # the current best classifier
                             # Format accuracy to 4 decimal places, extract first 4 digits after decimal point
                             accuracy_str = f"{test_accuracy:.4f}".split('.')[1][:4]
-                            lt_classifier_name = model_name_ + '-SSC-VIT-L-16-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
-                            lt_base_name = model_name_ + '-SSC-VIT-L-16-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-base-best.pth'
+                            lt_classifier_name = model_name_ + '-SSC-SWIN-BASE-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-classifier-best.pth'
+                            lt_base_name = model_name_ + '-SSC-SWIN-BASE-' + time_str + '-iteration-' + str(iteration) + '-accuracy-' + accuracy_str + '-SSC-base-best.pth'
                             torch.save(model, model_path + lt_base_name)
                             torch.save(classifier, model_path + lt_classifier_name)
                             logger.info(
@@ -279,8 +279,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 total_loss += np.mean(trainstyle_loss)
                 total_loss = total_loss / 50
                 if epoch == epochs - 1 and iteration == iterations - 1:
-                    lt_classifier_name = model_name_ + '-SSC-VIT-L-16-' + time_str + '-iteration-' + str(iteration) + '-SSC-classifier-last.pth'
-                    lt_base_name = model_name_ + '-SSC-VIT-L-16-' + time_str + '-iteration-' + str(iteration) + '-SSC-base-last.pth'
+                    lt_classifier_name = model_name_ + '-SSC-SWIN-BASE-' + time_str + '-iteration-' + str(iteration) + '-SSC-classifier-last.pth'
+                    lt_base_name = model_name_ + '-SSC-SWIN-BASE-' + time_str + '-iteration-' + str(iteration) + '-SSC-base-last.pth'
                     torch.save(model, model_path + lt_base_name)
                     torch.save(classifier, model_path + lt_classifier_name)
                     logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
