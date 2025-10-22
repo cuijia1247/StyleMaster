@@ -25,7 +25,7 @@ device1 = torch.device('cuda:0') if torch.cuda.is_available() else torch.device(
 def parameter_load():
     epochs = 120 #best, perhaps6001
     backbone = 'vit_large_patch16_224'
-    ssc_backend = 'vit_large_patch16_224'
+    ssc_backend = 'swin_base_patch4_window7_224'
     ssc_input = 1024
     ssc_output = 1024
     batch_size_ = 16
@@ -35,13 +35,13 @@ def parameter_load():
     base_lr = 0.0003 # current
     image_size = 64 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 40  # current
+    classfier_iteration = 20  # current
     classifier_lr = 0.0001 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
     classifier_training_gap = 10 # current
-    classifier_test_gap = 8 # current
+    classifier_test_gap = 5 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -122,9 +122,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         last_accuracy = 0.0
         logger.info('SSC fine-tuning mode is ready...')
 
-    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_vit_train_features.pkl'
+    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Pandora_vit_train_features.pkl'
     train_feature_dict = load_dataFeatures(train_feature_path)
-    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_vit_test_features.pkl'
+    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Pandora_vit_test_features.pkl'
     test_feature_dict = load_dataFeatures(test_feature_path)
 
     for iteration in range(iterations):
@@ -299,8 +299,8 @@ if __name__ == '__main__':
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     # dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
     # class_number = 10
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/'  # the '/' is necessary
-    class_number = 13
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Pandora/'  # the '/' is necessary
+    class_number = 12
     # ssc_output = 2048 #the best
     model_name = 'ssc-painting91'
     #setup logger for record the process data

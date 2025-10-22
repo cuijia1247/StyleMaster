@@ -380,10 +380,10 @@ def main():
     直接在此函数内配置所有参数，无需命令行传参。
     """
     # ==================== 参数配置区域 ====================
-    model_type = 'resnet'  # 'vit' 或 'resnet'
-    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Pandora/train/'  # 数据目录路径
+    model_type = 'vit'  # 'vit' 或 'resnet'
+    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Pandora/test/'  # 数据目录路径
     output_dir = 'pretrainFeatures'  # 输出特征保存目录
-    dataset_name = 'Pandora_resnet50_train'  # 输出文件名
+    dataset_name = 'Pandora_vit_test'  # 输出文件名
     batch_size = 64  # 批处理大小
     image_size = 224  # 输入图像尺寸
     device = 'cuda' if torch.cuda.is_available() else 'cpu'  # 计算设备

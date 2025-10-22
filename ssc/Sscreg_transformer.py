@@ -25,7 +25,7 @@ class MLP(nn.Module):
 
 class SscReg(nn.Module):
     def __init__(self,
-    backend = 'vit_large_patch16_224',
+    backend = 'swin_base_patch4_window7_224',
     input_size = 1024,
     output_size = 8192,
     depth_projector = 3,
@@ -38,7 +38,7 @@ class SscReg(nn.Module):
         
         # Load pretrained weights from local file if requested
         if pretrained_backend:
-            pretrained_path = 'pretrainModels/vit_large_patch16_224.pth'
+            pretrained_path = 'pretrainModels/swin_base_patch4_window7_224.pth'
             state_dict = torch.load(pretrained_path, map_location='cpu')
             self.backend.load_state_dict(state_dict, strict=False)
         
