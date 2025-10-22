@@ -381,9 +381,9 @@ def main():
     """
     # ==================== 参数配置区域 ====================
     model_type = 'resnet'  # 'vit' 或 'resnet'
-    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/test/'  # 数据目录路径
+    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Pandora/train/'  # 数据目录路径
     output_dir = 'pretrainFeatures'  # 输出特征保存目录
-    dataset_name = 'Painting91_resnet50_test'  # 输出文件名
+    dataset_name = 'Pandora_resnet50_train'  # 输出文件名
     batch_size = 64  # 批处理大小
     image_size = 224  # 输入图像尺寸
     device = 'cuda' if torch.cuda.is_available() else 'cpu'  # 计算设备

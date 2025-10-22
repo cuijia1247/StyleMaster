@@ -32,13 +32,13 @@ def parameter_load():
     base_lr = 0.009 # current
     image_size = 64 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 210  # current
-    classifier_lr = 0.0004 #best
+    classfier_iteration = 25  # current
+    classifier_lr = 0.001 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 15 # current
-    classifier_test_gap = 30 # current
+    classifier_training_gap = 10 # current
+    classifier_test_gap = 4  # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -116,9 +116,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         last_accuracy = 0.0
         logger.info('SSC fine-tuning mode is ready...')
 
-    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_resnet50_train_features.pkl'
+    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Pandora_resnet50_train_features.pkl'
     train_feature_dict = load_dataFeatures(train_feature_path)
-    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Painting91_resnet50_test_features.pkl'
+    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Pandora_resnet50_test_features.pkl'
     test_feature_dict = load_dataFeatures(test_feature_path)
 
     for iteration in range(iterations):
@@ -149,7 +149,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-            if epoch % 10 == 0 or epoch == epochs-1:
+            if epoch % 10 == 9 or epoch == epochs-1:
                 logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
                 # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
                 # train the style classifier every 500 iterations
@@ -204,7 +204,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     # total_loss += style_loss
                     trainstyle_loss.append(style_loss.item())
                     # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                    if i % 30 == 29: #################need adjust based on performance#####################
+                    if i % 10 == 9: #################need adjust based on performance#####################
                         logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                     len(trainset))
                         # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
@@ -220,7 +220,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             # backbone_view = resnet50(original)
                             feature_list = []
                             for name in names:
-                                feature_list.append(train_feature_dict[name])
+                                feature_list.append(test_feature_dict[name])
                             # Stack features into a tensor and move to the correct device
                             backbone_view = torch.stack(feature_list, dim=0).to(device)
                             img1 = model(view1)  # only use view 1
