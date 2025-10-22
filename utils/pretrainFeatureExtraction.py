@@ -381,93 +381,46 @@ def main():
     """
     # ==================== 参数配置区域 ====================
     model_type = 'resnet'  # 'vit' 或 'resnet'
-    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/train/'  # 数据目录路径
+    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/test/'  # 数据目录路径
     output_dir = 'pretrainFeatures'  # 输出特征保存目录
+    dataset_name = 'Painting91_resnet50_test'  # 输出文件名
     batch_size = 64  # 批处理大小
     image_size = 224  # 输入图像尺寸
     device = 'cuda' if torch.cuda.is_available() else 'cpu'  # 计算设备
     
     # ViT 配置
-    vit_model_name = 'vit_large_patch16_224'  # ViT模型名称
-    vit_pretrained_path = 'pretrainModels/vit_large_patch16_224.pth'  # 预训练权重路径
-    vit_feature_dim = 1024  # ViT特征维度
+    vit_model_name = 'vit_large_patch16_224'
+    vit_pretrained_path = 'pretrainModels/vit_large_patch16_224.pth'
     
     # ResNet 配置
-    resnet_model_name = 'resnet50'  # ResNet模型名称 ('resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152')
-    resnet_pretrained_path = None  # ResNet预训练权重路径 (None则使用torchvision预训练权重)
-    resnet_feature_dim = 2048  # ResNet50特征维度
+    resnet_model_name = 'resnet50'  # 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'
+    resnet_pretrained_path = None  # None则使用torchvision预训练权重
     # =====================================================
     
-    print("="*80)
-    print("Pretrained Feature Extraction")
-    print("="*80)
-    print(f"Data directory: {data_dir}")
-    print(f"Model type: {model_type.upper()}")
-    print(f"Output directory: {output_dir}")
-    print(f"Device: {device}")
-    print("="*80)
-    
-    # Check if data directory exists
-    if not os.path.exists(data_dir):
-        raise ValueError(f"Data directory not found: {data_dir}")
-    
-    # Collect image paths
-    print("\nCollecting image paths...")
+    # 收集图像路径
     image_paths, relative_paths = collect_image_paths(data_dir)
-    print(f"Found {len(image_paths)} images")
     
-    if len(image_paths) == 0:
-        raise ValueError(f"No images found in {data_dir}")
-    
-    # Load model based on model_type
+    # 加载模型
     if model_type.lower() == 'vit':
-        model_name = vit_model_name
-        pretrained_path = vit_pretrained_path
-        feature_dim = vit_feature_dim
-        dataset_name = f'Painting91_vit_test'
-        
-        print(f"\nLoading ViT model: {model_name}")
-        model = load_vit_model(model_name, pretrained_path, device)
-        flatten = False  # ViT already outputs flattened features
-        
+        model = load_vit_model(vit_model_name, vit_pretrained_path, device)
+        flatten = False
     elif model_type.lower() == 'resnet':
-        model_name = resnet_model_name
-        pretrained_path = resnet_pretrained_path
-        feature_dim = resnet_feature_dim
-        dataset_name = f'Painting91_resnet50_test'
-        
-        print(f"\nLoading ResNet model: {model_name}")
-        model = load_resnet_model(model_name, pretrained_path, device)
-        flatten = True  # ResNet outputs [B, C, 1, 1], needs flattening
-        
+        model = load_resnet_model(resnet_model_name, resnet_pretrained_path, device)
+        flatten = True
     else:
-        raise ValueError(f"Unsupported model_type: {model_type}. Choose 'vit' or 'resnet'")
+        raise ValueError(f"Unsupported model_type: {model_type}")
     
-    print(f"Expected feature dimension: {feature_dim}")
-    
-    # Get image transform
+    # 获取图像变换
     transform = get_image_transform(image_size)
     
-    # Extract features
-    print("\nExtracting features...")
+    # 提取特征
     feature_dict = extract_features(
         model, image_paths, relative_paths, transform, 
         device=device, batch_size=batch_size, flatten=flatten
     )
     
-    # Verify feature dimension
-    first_feature = next(iter(feature_dict.values()))
-    actual_feature_dim = first_feature.shape[0]
-    print(f"\nActual feature dimension: {actual_feature_dim}")
-    if actual_feature_dim != feature_dim:
-        print(f"Warning: Extracted feature dimension ({actual_feature_dim}) "
-              f"does not match expected dimension ({feature_dim})")
-    
-    # Save features
+    # 保存特征
     save_features(feature_dict, output_dir, dataset_name)
-    
-    print("\nFeature extraction completed successfully!")
-    print("="*80)
 
 
 if __name__ == '__main__':
