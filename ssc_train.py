@@ -273,10 +273,10 @@ if __name__ == '__main__':
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     # dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
     # class_number = 10
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/'  # the '/' is necessary
-    class_number = 13
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Pandora/'  # the '/' is necessary
+    class_number = 12
     # ssc_output = 2048 #the best
-    model_name = 'ssc-painting91'
+    model_name = 'ssc-pandora'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)

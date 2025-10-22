@@ -13,6 +13,7 @@ import torch.nn as nn
 import timm
 from PIL import Image
 import torchvision.transforms as transforms
+from torchvision import models
 from tqdm import tqdm
 from pathlib import Path
 import pickle
@@ -72,6 +73,63 @@ def load_vit_model(model_name='vit_large_patch16_224', pretrained_path='pretrain
     return model
 
 
+def load_resnet_model(model_name='resnet50', pretrained_path=None, device='cuda'):
+    """
+    Load the pretrained ResNet model.
+    
+    Args:
+        model_name: Name of the ResNet model ('resnet50', 'resnet101', etc.)
+        pretrained_path: Path to the pretrained model weights (optional, if None uses torchvision pretrained)
+        device: Device to load the model on ('cuda' or 'cpu')
+    
+    Returns:
+        model: Loaded ResNet model in eval mode (without final FC layer)
+    """
+    print(f"Loading model: {model_name}")
+    
+    # Create ResNet model
+    if model_name == 'resnet50':
+        model = models.resnet50(pretrained=False)
+    elif model_name == 'resnet101':
+        model = models.resnet101(pretrained=False)
+    elif model_name == 'resnet152':
+        model = models.resnet152(pretrained=False)
+    elif model_name == 'resnet18':
+        model = models.resnet18(pretrained=False)
+    elif model_name == 'resnet34':
+        model = models.resnet34(pretrained=False)
+    else:
+        raise ValueError(f"Unsupported ResNet model: {model_name}")
+    
+    # Load pretrained weights
+    if pretrained_path and os.path.exists(pretrained_path):
+        print(f"Loading pretrained weights from: {pretrained_path}")
+        state_dict = torch.load(pretrained_path, map_location='cpu')
+        model.load_state_dict(state_dict, strict=False)
+    else:
+        # Use torchvision pretrained weights
+        print(f"Loading torchvision pretrained weights for {model_name}")
+        if model_name == 'resnet50':
+            model = models.resnet50(pretrained=True)
+        elif model_name == 'resnet101':
+            model = models.resnet101(pretrained=True)
+        elif model_name == 'resnet152':
+            model = models.resnet152(pretrained=True)
+        elif model_name == 'resnet18':
+            model = models.resnet18(pretrained=True)
+        elif model_name == 'resnet34':
+            model = models.resnet34(pretrained=True)
+    
+    # Remove the final fully connected layer to get features
+    # ResNet features are extracted before avgpool + fc
+    model = nn.Sequential(*list(model.children())[:-1])  # Remove FC layer
+    
+    model = model.eval()
+    model = model.to(device)
+    
+    return model
+
+
 def collect_image_paths(data_dir, extensions=['.jpg', '.jpeg', '.png']):
     """
     Collect all image paths from the data directory.
@@ -103,7 +161,7 @@ def collect_image_paths(data_dir, extensions=['.jpg', '.jpeg', '.png']):
     return image_paths, relative_paths
 
 
-def extract_features(model, image_paths, relative_paths, transform, device='cuda', batch_size=32):
+def extract_features(model, image_paths, relative_paths, transform, device='cuda', batch_size=32, flatten=True):
     """
     Extract features from images using the model.
     
@@ -114,6 +172,7 @@ def extract_features(model, image_paths, relative_paths, transform, device='cuda
         transform: Image transformation pipeline
         device: Device to run inference on
         batch_size: Batch size for processing
+        flatten: Whether to flatten the output features (needed for ResNet)
     
     Returns:
         feature_dict: Dictionary mapping filename to feature vector
@@ -141,6 +200,10 @@ def extract_features(model, image_paths, relative_paths, transform, device='cuda
                     batch_tensor = torch.stack(batch_images).to(device)
                     batch_features = model(batch_tensor)
                     
+                    # Flatten if needed (for ResNet output which is [B, C, 1, 1])
+                    if flatten and len(batch_features.shape) > 2:
+                        batch_features = batch_features.view(batch_features.size(0), -1)
+                    
                     # Store features in dictionary with filename as key
                     for filename, feature_vector in zip(batch_names, batch_features.cpu()):
                         feature_dict[filename] = feature_vector
@@ -156,6 +219,10 @@ def extract_features(model, image_paths, relative_paths, transform, device='cuda
         if len(batch_images) > 0:
             batch_tensor = torch.stack(batch_images).to(device)
             batch_features = model(batch_tensor)
+            
+            # Flatten if needed (for ResNet output which is [B, C, 1, 1])
+            if flatten and len(batch_features.shape) > 2:
+                batch_features = batch_features.view(batch_features.size(0), -1)
             
             # Store features in dictionary with filename as key
             for filename, feature_vector in zip(batch_names, batch_features.cpu()):
@@ -313,23 +380,29 @@ def main():
     直接在此函数内配置所有参数，无需命令行传参。
     """
     # ==================== 参数配置区域 ====================
-    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/test/'  # 数据目录路径
-    model_name = 'vit_large_patch16_224'  # ViT模型名称
-    pretrained_path = 'pretrainModels/vit_large_patch16_224.pth'  # 预训练权重路径
+    model_type = 'resnet'  # 'vit' 或 'resnet'
+    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/train/'  # 数据目录路径
     output_dir = 'pretrainFeatures'  # 输出特征保存目录
-    dataset_name = 'Painting91_vit_test'  # 数据集名称
-    feature_dim = 1024  # 期望的特征维度
     batch_size = 64  # 批处理大小
     image_size = 224  # 输入图像尺寸
     device = 'cuda' if torch.cuda.is_available() else 'cpu'  # 计算设备
+    
+    # ViT 配置
+    vit_model_name = 'vit_large_patch16_224'  # ViT模型名称
+    vit_pretrained_path = 'pretrainModels/vit_large_patch16_224.pth'  # 预训练权重路径
+    vit_feature_dim = 1024  # ViT特征维度
+    
+    # ResNet 配置
+    resnet_model_name = 'resnet50'  # ResNet模型名称 ('resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152')
+    resnet_pretrained_path = None  # ResNet预训练权重路径 (None则使用torchvision预训练权重)
+    resnet_feature_dim = 2048  # ResNet50特征维度
     # =====================================================
     
     print("="*80)
     print("Pretrained Feature Extraction")
     print("="*80)
     print(f"Data directory: {data_dir}")
-    print(f"Model: {model_name}")
-    print(f"Expected feature dimension: {feature_dim}")
+    print(f"Model type: {model_type.upper()}")
     print(f"Output directory: {output_dir}")
     print(f"Device: {device}")
     print("="*80)
@@ -346,8 +419,31 @@ def main():
     if len(image_paths) == 0:
         raise ValueError(f"No images found in {data_dir}")
     
-    # Load model
-    model = load_vit_model(model_name, pretrained_path, device)
+    # Load model based on model_type
+    if model_type.lower() == 'vit':
+        model_name = vit_model_name
+        pretrained_path = vit_pretrained_path
+        feature_dim = vit_feature_dim
+        dataset_name = f'Painting91_vit_test'
+        
+        print(f"\nLoading ViT model: {model_name}")
+        model = load_vit_model(model_name, pretrained_path, device)
+        flatten = False  # ViT already outputs flattened features
+        
+    elif model_type.lower() == 'resnet':
+        model_name = resnet_model_name
+        pretrained_path = resnet_pretrained_path
+        feature_dim = resnet_feature_dim
+        dataset_name = f'Painting91_resnet50_test'
+        
+        print(f"\nLoading ResNet model: {model_name}")
+        model = load_resnet_model(model_name, pretrained_path, device)
+        flatten = True  # ResNet outputs [B, C, 1, 1], needs flattening
+        
+    else:
+        raise ValueError(f"Unsupported model_type: {model_type}. Choose 'vit' or 'resnet'")
+    
+    print(f"Expected feature dimension: {feature_dim}")
     
     # Get image transform
     transform = get_image_transform(image_size)
@@ -356,14 +452,15 @@ def main():
     print("\nExtracting features...")
     feature_dict = extract_features(
         model, image_paths, relative_paths, transform, 
-        device=device, batch_size=batch_size
+        device=device, batch_size=batch_size, flatten=flatten
     )
     
     # Verify feature dimension
     first_feature = next(iter(feature_dict.values()))
     actual_feature_dim = first_feature.shape[0]
+    print(f"\nActual feature dimension: {actual_feature_dim}")
     if actual_feature_dim != feature_dim:
-        print(f"\nWarning: Extracted feature dimension ({actual_feature_dim}) "
+        print(f"Warning: Extracted feature dimension ({actual_feature_dim}) "
               f"does not match expected dimension ({feature_dim})")
     
     # Save features
