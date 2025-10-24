@@ -32,16 +32,16 @@ def parameter_load():
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
-    base_lr = 0.0003 # current
+    base_lr = 0.0001 # current
     image_size = 64 # best
     # classfier_iteration = 180 # best
     classfier_iteration = 20  # current
-    classifier_lr = 0.0001 #best
+    classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
     classifier_training_gap = 10 # current
-    classifier_test_gap = 5 # current
+    classifier_test_gap = 4 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -122,9 +122,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         last_accuracy = 0.0
         logger.info('SSC fine-tuning mode is ready...')
 
-    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Pandora_vit_train_features.pkl'
+    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/WikiArt3_vit_train_features.pkl'
     train_feature_dict = load_dataFeatures(train_feature_path)
-    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Pandora_vit_test_features.pkl'
+    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/WikiArt3_vit_test_features.pkl'
     test_feature_dict = load_dataFeatures(test_feature_path)
 
     for iteration in range(iterations):
@@ -213,7 +213,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     # total_loss += style_loss
                     trainstyle_loss.append(style_loss.item())
                     # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                    if i % 10 == 9: #################need adjust based on performance#####################
+                    if i % 5 == 4: #################need adjust based on performance#####################
                         logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                     len(trainset))
                         # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
@@ -299,10 +299,10 @@ if __name__ == '__main__':
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     # dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
     # class_number = 10
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Pandora/'  # the '/' is necessary
-    class_number = 12
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/WikiArt3/'  # the '/' is necessary
+    class_number = 15
     # ssc_output = 2048 #the best
-    model_name = 'ssc-painting91'
+    model_name = 'ssc-WikiArt3'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
@@ -317,7 +317,7 @@ if __name__ == '__main__':
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
     ##########new add 20251018####################
-    iterations = 2
+    iterations = 1
     training_mode = 'original' # 'original' or 'fine-tuning'
     base_model_path = './model/ssc-painting91-SSR-resnet50-2025-10-18-10-10-10-SSC-base-best.pth' # only for the fine-tuning mode
     ##########new add 20251018####################

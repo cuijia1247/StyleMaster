@@ -275,20 +275,20 @@ def save_features(feature_dict, output_dir, dataset_name):
 
 
 def load_dataFeatures(feature_path):
-    """
-    Load extracted features from a .pkl file.
-    
-    Args:
-        feature_path: Path to the .pkl file containing extracted features
-    
-    Returns:
-        feature_dict: Dictionary mapping filename to feature vector
-    
-    Example:
-        >>> feature_dict = load_dataFeatures('pretrainFeatures/Painting91_features.pkl')
-        >>> feature_vector = feature_dict['image.jpg']
-        >>> print(f"Feature shape: {feature_vector.shape}")
-    """
+    # """
+    # Load extracted features from a .pkl file.
+    #
+    # Args:
+    #     feature_path: Path to the .pkl file containing extracted features
+    #
+    # Returns:
+    #     feature_dict: Dictionary mapping filename to feature vector
+    #
+    # Example:
+    #     >>> feature_dict = load_dataFeatures('pretrainFeatures/Painting91_features.pkl')
+    #     >>> feature_vector = feature_dict['image.jpg']
+    #     >>> print(f"Feature shape: {feature_vector.shape}")
+    # """
     if not os.path.exists(feature_path):
         raise FileNotFoundError(f"Feature file not found: {feature_path}")
     
@@ -312,20 +312,20 @@ def load_dataFeatures(feature_path):
 
 
 def get_feature_by_filename(feature_dict, filename):
-    """
-    通过文件名获取特征向量。
-    
-    Args:
-        feature_dict: 特征字典
-        filename: 文件名（不包含路径）
-    
-    Returns:
-        feature_vector: 对应的特征向量
-    
-    Example:
-        >>> feature_dict = load_dataFeatures('features.pkl')
-        >>> feature = get_feature_by_filename(feature_dict, 'image.jpg')
-    """
+    # """
+    # 通过文件名获取特征向量。
+    #
+    # Args:
+    #     feature_dict: 特征字典
+    #     filename: 文件名（不包含路径）
+    #
+    # Returns:
+    #     feature_vector: 对应的特征向量
+    #
+    # Example:
+    #     >>> feature_dict = load_dataFeatures('features.pkl')
+    #     >>> feature = get_feature_by_filename(feature_dict, 'image.jpg')
+    # """
     if filename not in feature_dict:
         raise KeyError(f"Filename '{filename}' not found in feature dictionary")
     return feature_dict[filename]
@@ -381,9 +381,9 @@ def main():
     """
     # ==================== 参数配置区域 ====================
     model_type = 'vit'  # 'vit' 或 'resnet'
-    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/Pandora/test/'  # 数据目录路径
+    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/WikiArt3/train/'  # 数据目录路径
     output_dir = 'pretrainFeatures'  # 输出特征保存目录
-    dataset_name = 'Pandora_vit_test'  # 输出文件名
+    dataset_name = 'WikiArt3_vit_train'  # 输出文件名
     batch_size = 64  # 批处理大小
     image_size = 224  # 输入图像尺寸
     device = 'cuda' if torch.cuda.is_available() else 'cpu'  # 计算设备
