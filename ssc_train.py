@@ -13,14 +13,14 @@ import numpy as np
 from ssc.Sscreg import SscReg
 from ssc.utils import criterion, get_ssc_transforms, MultiViewDataInjector
 from SscDataSet import SscDataset
-from ssc.classifier import Classifier
+from ssc.classifier import Classifier, EfficientClassifier
 from utils.pretrainFeatureExtraction import load_dataFeatures
 
 #setup device for cuda or cpu
 device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 210 #best, perhaps6001
+    epochs = 140 #best, perhaps6001
     backbone = 'resnet50'
     ssc_backend = 'resnet50'
     ssc_input = 2048
@@ -32,13 +32,13 @@ def parameter_load():
     base_lr = 0.009 # current
     image_size = 64 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 25  # current
-    classifier_lr = 0.001 #best
+    classfier_iteration = 60  # current
+    classifier_lr = 0.0001 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 10 # current
-    classifier_test_gap = 4  # current
+    classifier_training_gap = 20 # current
+    classifier_test_gap = 6  # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -116,9 +116,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         last_accuracy = 0.0
         logger.info('SSC fine-tuning mode is ready...')
 
-    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Pandora_resnet50_train_features.pkl'
+    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Arch_resnet_train_features.pkl'
     train_feature_dict = load_dataFeatures(train_feature_path)
-    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Pandora_resnet50_test_features.pkl'
+    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Arch_resnet_test_features.pkl'
     test_feature_dict = load_dataFeatures(test_feature_path)
 
     for iteration in range(iterations):
@@ -154,7 +154,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
                 # train the style classifier every 500 iterations
             if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
-                classifier = Classifier(ssc_output_, class_number).to(device)
+                classifier = EfficientClassifier(ssc_output_, class_number).to(device)
                 classifier_criterion = nn.CrossEntropyLoss()
                 classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
                 total_loss = 0.0
@@ -289,10 +289,10 @@ if __name__ == '__main__':
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     # dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
     # class_number = 10
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Pandora/'  # the '/' is necessary
-    class_number = 12
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Arch/'  # the '/' is necessary
+    class_number = 25
     # ssc_output = 2048 #the best
-    model_name = 'ssc-pandora'
+    model_name = 'ssc-Arch'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
