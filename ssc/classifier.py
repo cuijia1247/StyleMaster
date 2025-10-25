@@ -30,3 +30,29 @@ class Classifier(nn.Module):
         out = self.layer3(hidden)
         # out = self.activation_layer(hidden)
         return out
+
+
+class EfficientClassifier(nn.Module):
+    def __init__(self, input_feature, class_number):
+        super(EfficientClassifier, self).__init__()
+        self.classifier = nn.Sequential(
+            nn.Linear(input_feature, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            
+            nn.Linear(512, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            
+            nn.Linear(128, class_number)
+        )
+    
+    def forward(self, x):
+        return self.classifier(x)

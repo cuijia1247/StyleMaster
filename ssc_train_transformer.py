@@ -15,7 +15,7 @@ import timm
 from ssc.Sscreg_transformer import SscReg
 from ssc.utils import criterion, get_ssc_transforms, MultiViewDataInjector
 from SscDataSet import SscDataset
-from ssc.classifier import Classifier
+from ssc.classifier import Classifier, EfficientClassifier
 from utils.pretrainFeatureExtraction import load_dataFeatures
 
 #setup device for cuda or cpu
@@ -33,15 +33,15 @@ def parameter_load():
     offset_bs = 512
     # base_lr = 0.008 # best
     base_lr = 0.0001 # current
-    image_size = 64 # best
+    image_size = 224 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 20  # current
-    classifier_lr = 0.0005 #best
+    classfier_iteration = 1000  # current
+    classifier_lr = 0.01 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
-    classifier_training_gap = 10 # current
-    classifier_test_gap = 4 # current
+    classifier_training_gap = 5 # current
+    classifier_test_gap = 100 # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -140,7 +140,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         logger.info('SSC ' + dataSource + 'for ' + str(iteration) + ' iterations is ready...')
 
         for epoch in range(epochs):
-            # print('epoch is {}'.format(epoch))
+            print('epoch is {}'.format(epoch))
             model.train()
             tk0 = trainloader
             train_loss = []
@@ -155,23 +155,24 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-            if epoch % 10 == 0 or epoch == epochs-1:
+            if epoch % 30 == 0 or epoch == epochs-1:
                 logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
                 # print('The epoch is {}, Vic train loss is {}'.format(epoch, np.mean(train_loss)))
                 # train the style classifier every 500 iterations
             if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs-1:
                 model.eval()
-                classifier = Classifier(ssc_output_, class_number).to(device0)
+                classifier = EfficientClassifier(ssc_output_, class_number).to(device0)
                 classifier_criterion = nn.CrossEntropyLoss()
                 classifier_optimizer = torch.optim.Adam(classifier.parameters(), lr=classifier_lr_)
                 total_loss = 0.0
+                loss_count = 0  # 用于记录损失累加的次数
                 style_loss = torch.zeros(1).to(device1)
                 # logger.info('SSC classifier model is ready...')
                 # model.eval()
                 # correct = 0.0
                 # total_number = len(trainset)
                 for i in range(classifier_iteration_):
-                    classifier.train()
+                    # classifier.train()
                     trainstyle_loss = []
                     total_correct = 0.0
                     tk1 = trainloader
@@ -213,14 +214,14 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                     # total_loss += style_loss
                     trainstyle_loss.append(style_loss.item())
                     # print('The correct/total_correct--total is {}/{}--{}'.format(correct, total_correct, len(view1)))
-                    if i % 5 == 4: #################need adjust based on performance#####################
+                    if i % 20 == 19: #################need adjust based on performance#####################
                         logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                     len(trainset))
                         # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
                     # if i % 10 == 9:
                     if i % classifier_test_gap_ == classifier_test_gap_ - 1:
                         test_correct = 0.0
-                        classifier.eval()
+                        # classifier.eval()
                         for view1, view2, label, names_, original in tk2:
                             correct_ = 0.0
                             view1 = view1.to(device1).detach()
@@ -277,7 +278,10 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             test_correct,
                             len(testset), test_accuracy)
                 total_loss += np.mean(trainstyle_loss)
-                total_loss = total_loss / 50
+                loss_count += 1
+                # 计算平均损失，使用实际的累加次数而不是硬编码的50
+                avg_loss = total_loss / loss_count if loss_count > 0 else 0.0
+                logger.info('The average loss is %f', avg_loss)
                 if epoch == epochs - 1 and iteration == iterations - 1:
                     lt_classifier_name = model_name_ + '-SSC-SWIN-BASE-' + time_str + '-iteration-' + str(iteration) + '-SSC-classifier-last.pth'
                     lt_base_name = model_name_ + '-SSC-SWIN-BASE-' + time_str + '-iteration-' + str(iteration) + '-SSC-base-last.pth'
@@ -299,7 +303,7 @@ if __name__ == '__main__':
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     # dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
     # class_number = 10
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/WikiArt3/'  # the '/' is necessary
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/WikiArt3_small/'  # the '/' is necessary
     class_number = 15
     # ssc_output = 2048 #the best
     model_name = 'ssc-WikiArt3'
