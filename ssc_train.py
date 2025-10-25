@@ -20,7 +20,7 @@ from utils.pretrainFeatureExtraction import load_dataFeatures
 device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('cpu')
 
 def parameter_load():
-    epochs = 140 #best, perhaps6001
+    epochs = 200 #best, perhaps6001
     backbone = 'resnet50'
     ssc_backend = 'resnet50'
     ssc_input = 2048
@@ -29,16 +29,16 @@ def parameter_load():
     batch_size_sample = 'None'
     offset_bs = 512
     # base_lr = 0.008 # best
-    base_lr = 0.009 # current
+    base_lr = 0.008 # current
     image_size = 64 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 60  # current
-    classifier_lr = 0.0001 #best
+    classfier_iteration = 20  # current
+    classifier_lr = 0.001 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
     classifier_training_gap = 20 # current
-    classifier_test_gap = 6  # current
+    classifier_test_gap = 4  # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -116,9 +116,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         last_accuracy = 0.0
         logger.info('SSC fine-tuning mode is ready...')
 
-    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Arch_resnet_train_features.pkl'
+    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/AVAstyle_resnet_train_features.pkl'
     train_feature_dict = load_dataFeatures(train_feature_path)
-    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/Arch_resnet_test_features.pkl'
+    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/AVAstyle_resnet_test_features.pkl'
     test_feature_dict = load_dataFeatures(test_feature_path)
 
     for iteration in range(iterations):
@@ -288,11 +288,12 @@ if __name__ == '__main__':
     # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
     # dataSource = './data/artbench/' #artbench dataset, classes = 10
     # dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
+    # dataSource = './data/AVAstyle'  # artbench dataset, classes = 14
     # class_number = 10
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Arch/'  # the '/' is necessary
-    class_number = 25
+    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/AVAstyle/'  # the '/' is necessary
+    class_number = 14
     # ssc_output = 2048 #the best
-    model_name = 'ssc-Arch'
+    model_name = 'ssc-AVAstyle'
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)

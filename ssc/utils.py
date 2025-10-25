@@ -27,7 +27,7 @@ def criterion(x, y, lmbd = 5e-3, u = 1, v= 1, epsilon = 1e-3, device=torch.devic
 def get_ssc_transforms(size, mean, std): #special for SSC training
     transformT = tr.Compose([
         transforms.ToTensor(),
-        tr.RandomResizedCrop(size=size, scale=(0.2,0.8), ratio=(3 / 4, 4 / 3)),
+        tr.RandomResizedCrop(size=size, scale=(0.7,0.9), ratio=(3 / 4, 4 / 3)),
         tr.RandomRotation((-90, 90)),
         # tr.ColorJitter(),
         # tr.GaussianBlur(kernel_size=(23,23), sigma=(0.1, 2.0)),
@@ -37,7 +37,7 @@ def get_ssc_transforms(size, mean, std): #special for SSC training
 
     transformT1 = tr.Compose([
         transforms.ToTensor(),
-        tr.RandomResizedCrop(size=size, scale=(0.2,0.8), ratio=(3 / 4, 4 / 3)),
+        tr.RandomResizedCrop(size=size, scale=(0.7,0.9), ratio=(3 / 4, 4 / 3)),
         tr.RandomRotation((-90, 90)),
         # tr.ColorJitter(),
         # tr.RandomGrayscale(p=0.2),
@@ -57,7 +57,7 @@ def get_ssc_transforms(size, mean, std): #special for SSC training
 def get_byol_transforms(size, mean, std):
     transformT = tr.Compose([
         transforms.ToTensor(),
-        tr.RandomResizedCrop(size=size, scale=(0.08,1), ratio=(3 / 4, 4 / 3)),
+        tr.RandomResizedCrop(size=size, scale=(0.2,0.8), ratio=(3 / 4, 4 / 3)),
         # tr.RandomRotation((-90, 90)),
         # tr.ColorJitter(),
         # tr.GaussianBlur(kernel_size=(23,23), sigma=(0.1, 2.0)),
@@ -67,7 +67,7 @@ def get_byol_transforms(size, mean, std):
 
     transformT1 = tr.Compose([
         transforms.ToTensor(),
-        tr.RandomResizedCrop(size=size, scale=(0.08,1), ratio=(3 / 4, 4 / 3)),
+        tr.RandomResizedCrop(size=size, scale=(0.2,0.8), ratio=(3 / 4, 4 / 3)),
         # tr.RandomRotation((-90, 90)),
         # tr.ColorJitter(),
         # tr.RandomGrayscale(p=0.2),
