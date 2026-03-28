@@ -13,7 +13,7 @@ import numpy as np
 from ssc.Sscreg import SscReg
 from ssc.utils import criterion, get_ssc_transforms, MultiViewDataInjector
 from SscDataSet import SscDataset
-from ssc.classifier import Classifier, EfficientClassifier
+from ssc.classifier import Classifier, EfficientClassifier, AdvancedClassifier
 from utils.pretrainFeatureExtraction import load_dataFeatures
 
 #setup device for cuda or cpu
@@ -32,13 +32,13 @@ def parameter_load():
     base_lr = 0.008 # current
     image_size = 64 # best
     # classfier_iteration = 180 # best
-    classfier_iteration = 20  # current
-    classifier_lr = 0.001 #best
+    classfier_iteration = 200  # current
+    classifier_lr = 0.0005 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
     classifier_training_gap = 20 # current
-    classifier_test_gap = 4  # current
+    classifier_test_gap = 10  # current
     model_name = ''
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
@@ -179,12 +179,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             feature_list.append(train_feature_dict[name])
                         # Stack features into a tensor and move to the correct device
                         backbone_view = torch.stack(feature_list, dim=0).to(device)
-                        img1 = model(view1)  # only use view 1
-                        img2 = model(view2)
-                        test1 = backbone_view - img1
-                        test2 = backbone_view - img2
-                        test = test1 + test2
-                        prediction = classifier(test)
+                        # img1 = model(view1)  # only use view 1
+                        # img2 = model(view2)
+                        # test1 = backbone_view - img1
+                        # test2 = backbone_view - img2
+                        # test = test1 + test2
+                        prediction = classifier(backbone_view)
                         # val, idx = prediction.topk(1)
                         # idx = idx.t().squeeze()
                         # idx = idx.cpu().float()
@@ -223,12 +223,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                                 feature_list.append(test_feature_dict[name])
                             # Stack features into a tensor and move to the correct device
                             backbone_view = torch.stack(feature_list, dim=0).to(device)
-                            img1 = model(view1)  # only use view 1
-                            img2 = model(view2)
-                            test1 = backbone_view - img1
-                            test2 = backbone_view - img2
-                            test = test1 + test2
-                            prediction = classifier(test)
+                            # img1 = model(view1)  # only use view 1
+                            # img2 = model(view2)
+                            # test1 = backbone_view - img1
+                            # test2 = backbone_view - img2
+                            # test = test1 + test2
+                            prediction = classifier(backbone_view)
                             # val, idx = prediction.topk(1)
                             # idx = idx.t().squeeze()
                             # idx = idx.cpu().float()

@@ -1,8 +1,23 @@
 # Data folder
 data/
 
-# Pretrained features (large files)
+# Pretrained features and models (large files)
 pretrainFeatures/
+pretrainModels/
+
+# Model checkpoints
+model/
+model_old/
+
+# Log backup and runtime logs
+log_backup/
+log/
+
+# Prediction outputs
+prediction/
+
+# HR author scripts folder
+HR/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

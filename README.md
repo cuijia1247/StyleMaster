@@ -1,74 +1,213 @@
-# SSC 
-(SubStyleClassification done by CJ in Oct. 26th 2024)
-## waiting for the new paper, released soon
-Thanks for the contribution of code repository list
- * VicReg
- * SimCLR
- * Barlow Twin
- * ...
+# SSC — Sub-Style Classification
 
-## Installation
+**Author:** cuijia1247 | **Started:** Oct. 2024 | **Current Version:** Mar. 2026
 
-**Requirements:**
+> Paper coming soon.
+
+---
+
+## 项目简介
+
+StyleMaster是一个面向风格的特征学习框架。其包括主风格特征(Style Consensus Learning)和子风格特征(Sub-Style Learning)两部分组成
+
+Sub-Style Learning是一个基于自监督对比学习的艺术风格细粒度分类框架。核心思想：将同一幅画的两个随机裁剪子图（view1 / view2）送入 SSC 编码器，利用SSLM风格的损失函数约束特征空间，再训练轻量分类头完成风格判别。
+
+支持的数据集：`Painting91` · `AVAstyle` · `WikiArt3` · `FashionStyle14` · `Pandora` · `Arch` · `artbench`
+
+---
+
+## 目录结构
+
+```
+SubStyleClassfication/
+├── ssc/                        # 核心模块
+│   ├── Sscreg.py               # ResNet-based SscReg 模型
+│   ├── Sscreg_transformer.py   # Transformer-based SscReg 模型（Swin / ViT）
+│   ├── Sscreg_flexible.py      # 灵活版本
+│   ├── Backend.py              # ResNet backbone 封装
+│   ├── classifier.py           # 分类头（Classifier / EfficientClassifier / AdvancedClassifier）
+│   └── utils.py                # 损失函数、数据增强变换
+├── utils/                      # 工具脚本
+│   ├── pretrainFeatureExtraction.py  # 预训练特征提取与加载
+│   ├── image_processing.py     # 图像处理工具
+│   ├── styleLevelCal.py        # 风格层级计算
+│   └── trainTestSplit.py       # 数据集划分
+├── ssc_train.py                # ResNet 版训练入口
+├── ssc_train_transformer.py    # Transformer 版训练入口
+├── ssc_predict.py              # 推理：计算 view1/view2 余弦相似度统计
+├── SscDataSet.py               # 数据集加载器
+├── barlowtwins/                # Barlow Twins 对比实现
+├── simclr/                     # SimCLR 对比实现
+├── byol/                       # BYOL 对比实现
+├── simsiam/                    # SimSiam 对比实现
+├── I-JEPA-main/                # I-JEPA 对比实现
+├── pretrainModels/             # 本地预训练权重存放目录
+├── pretrainFeatures/           # 预提取特征缓存（.pkl / .pth）
+├── model/                      # 训练保存的模型权重
+├── log/                        # 训练日志
+├── data/                       # 数据集根目录
+└── requirements.txt
+```
+
+---
+
+## 安装
+
+**环境要求：**
 - Python 3.8.19
-- PyTorch 2.1.0
-- CUDA (optional, for GPU acceleration)
+- PyTorch 2.1.0 + torchvision 0.16.0
+- CUDA（推荐，GPU 加速）
 
-**Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-## Dataset Setup
+主要依赖还包括 `timm`（Swin/ViT backbone）、`einops`、`pytorch_lightning`、`scipy`。
 
-Organize your dataset in the following structure:
+---
+
+## 数据集准备
+
+按以下结构组织数据集：
+
 ```
-## Dataset setup
-Dataset - test #the folder for test images with subfolders
-        - train #the folder for train with subfoders
-            - 1, 2, 3, ... #every class in a single sub-folder
-Notice: the names of subfolders are class names
-The demo dataset can be found in the following folder
-'./data/DemoData/'
+data/<DatasetName>/
+├── train/
+│   ├── class_1/
+│   ├── class_2/
+│   └── ...
+└── test/
+    ├── class_1/
+    ├── class_2/
+    └── ...
+```
 
+示例数据位于 `./data/DemoData/`。
 
-## Model
+---
 
-### ViT-based SSC Model (当前使用)
+## 预训练特征提取
+
+训练前需先用骨干网络提取并缓存特征，避免每轮重复推理：
+
+```bash
+python utils/pretrainFeatureExtraction.py
+```
+
+提取结果保存至 `./pretrainFeatures/`，训练时通过 `load_dataFeatures()` 加载。
+
+---
+
+## 模型
+
+### Transformer 版（当前主力）
+
 ```python
 from ssc.Sscreg_transformer import SscReg
 
-# 使用ViT-large/16作为backbone
 model = SscReg(
-    backend='vit_large_patch16_224',
+    backend='swin_base_patch4_window7_224',  # 或 'vit_large_patch16_224'
     input_size=1024,
     output_size=1024,
     depth_projector=3,
-    pretrained_backend=False)
+    pretrained_backend=True  # 从 pretrainModels/ 加载本地权重
+)
 ```
 
-### ResNet-based SSC Model (旧版)
+### ResNet 版
+
 ```python
 from ssc.Sscreg import SscReg
 
 model = SscReg(
     backend='resnet50',
     input_size=2048,
-    output_size=256,
+    output_size=2048,
     depth_projector=3,
-    pretrained_backend=False)
+    pretrained_backend=False
+)
 ```
 
-**模型特性：**
-- 当前使用 ViT-large/16 作为backbone
-- 基座模型输出维度：1024
-- 支持本地预训练模型加载，完全离线运行
+### 分类头
 
+| 类名 | 结构 | 适用场景 |
+|------|------|----------|
+| `Classifier` | Linear × 3 + SiLU + Dropout | 基础版 |
+| `EfficientClassifier` | Linear-BN-ReLU-Dropout × 4 | 推荐（当前默认） |
+| `AdvancedClassifier` | 多头注意力 + 残差块 + MLP | 高容量版 |
 
+---
+
+## 训练
+
+### ResNet 版
+
+```bash
+python ssc_train.py
+# 或后台运行：
+bash run_ssc_resnet_background.sh
+```
+
+### Transformer 版
+
+```bash
+python ssc_train_transformer.py
+# 或后台运行：
+bash run_ssc_vit_background.sh
+```
+
+**主要训练参数（在各脚本 `parameter_load()` 中修改）：**
+
+| 参数 | ResNet 默认 | Transformer 默认 |
+|------|-------------|-----------------|
+| epochs | 200 | 120 |
+| batch_size | 64 | 16 |
+| base_lr | 0.008 | 0.0001 |
+| image_size | 64 | 224 |
+| classifier_iteration | 200 | 1000 |
+
+训练日志保存至 `./log/`，最优模型保存至 `./model/`（含精度信息的文件名）。
+
+---
+
+## 损失函数
+
+`ssc/utils.py` 中的 `criterion()` 实现 VICReg 风格三项损失：
+
+```
+Loss = var_loss + invar_loss + cross_loss
+```
+
+- **var_loss**：保持特征多样性，防止坍缩
+- **invar_loss**：MSE 约束两视图特征一致
+- **cross_loss**：交叉相关矩阵去相关（Barlow Twins 思路）
+
+---
+
+## 推理
+
+```bash
+python ssc_predict.py
+```
+
+遍历数据集全部分片（train / test / val），计算 view1 与 view2 的余弦相似度并输出统计信息（均值、方差、标准差、最大/最小值）。
+
+---
+
+## 对比方法
+
+项目包含以下 SSL 方法的对比实现，训练入口分别为 `*_train.py`：
+
+- **Barlow Twins** (`barlowtwins/`)
+- **SimCLR** (`simclr/`)
+- **BYOL** (`byol/`)
+- **SimSiam** (`simsiam/`)
+- **I-JEPA** (`I-JEPA-main/`)
+
+---
 
 ## Citation
+
 ```
 waiting for our new released paper citation
 ```
-
-在utils/文件夹下建立新的脚本imageFeatureExtraction.py, 对指定的数据库文件夹（/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/）读取所有jpg或png文件，通过指定的基线模型（vit_large_patch16_224）进行特征提取，提取指定维度的特征（1024）和文件名，并将其存储为pth文件，放入pretrainFeatures文件夹。
