@@ -4,6 +4,7 @@
 # version: 1.0
 import logging
 import time
+import os
 import torch
 from torch import nn
 import torch.optim as optim
@@ -46,7 +47,7 @@ def parameter_load():
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)#, classifier_structure
 
-def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_number, iterations, training_mode, base_model_path):
+def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_number, iterations, training_mode, base_model_path, preFeaturePath, feature_name):
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
     logger.debug('THIS IS THE FORMAL TRAINING PROCESS OF SSC TRAIN')
     logger.debug('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
@@ -122,9 +123,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
         last_accuracy = 0.0
         logger.info('SSC fine-tuning mode is ready...')
 
-    train_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/WikiArt3_vit_train_features.pkl'
+    train_feature_path = os.path.join(preFeaturePath, f"{feature_name}_train_features.pkl")
     train_feature_dict = load_dataFeatures(train_feature_path)
-    test_feature_path = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures/WikiArt3_vit_test_features.pkl'
+    test_feature_path = os.path.join(preFeaturePath, f"{feature_name}_test_features.pkl")
     test_feature_dict = load_dataFeatures(test_feature_path)
 
     for iteration in range(iterations):
@@ -293,25 +294,43 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
 
 
 if __name__ == '__main__':
-    # save_iteration = 1001 #not used for now
     model_path = './model/'
-    # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
-    # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
-    # dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
-    # dataSource = './data/Arch/'  # Arch dataset, classes = 25
-    # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
-    # dataSource = './data/artbench/' #artbench dataset, classes = 10
-    # dataSource = './data/webstyle/subImages/'  # artbench dataset, classes = 10
-    # class_number = 10
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/WikiArt3_small/'  # the '/' is necessary
-    class_number = 15
-    # ssc_output = 2048 #the best
-    model_name = 'ssc-WikiArt3'
+
+    # =====================================================================
+    # 1. 核心配置：只需修改数据集名称
+    # =====================================================================
+    dataset_name = 'WikiArt3_small'                             # 可选: 'Painting91', 'AVAstyle', 'Pandora', 'WikiArt3', 'Arch', 'FashionStyle14', 'artbench', 'webstyle/subImages'
+
+    # 数据集类别数映射表
+    class_num_dict = {
+        'Painting91': 13,
+        'Pandora': 12,
+        'WikiArt3': 15,
+        'WikiArt3_small': 15,
+        'Arch': 25,
+        'FashionStyle14': 14,
+        'artbench': 10,
+        'webstyle/subImages': 10,
+        'AVAstyle': 14
+    }
+
+    # =====================================================================
+    # 2. 自动生成相关变量
+    # =====================================================================
+    data_root = '/mnt/codes/data/style/'                        # 数据集统一根目录
+    dataSource = os.path.join(data_root, dataset_name) + '/'    # 自动生成数据源路径（末尾保留 '/'）
+    class_number = class_num_dict.get(dataset_name, 10)         # 自动获取类别数，默认10
+    
+    # 处理带有子目录的数据集名称（如 webstyle/subImages）
+    safe_dataset_name = dataset_name.replace('/', '_')
+    model_name = f'ssc-{safe_dataset_name}'                     # 自动生成模型文件名前缀
+    feature_name = f'{safe_dataset_name}_vit'                   # 自动生成预提取特征文件名前缀（注意这里是_vit）
+    preFeaturePath = './pretrainFeatures'                       # 预提取特征保存路径
+
     #setup logger for record the process data
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
-    # formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     formatter = logging.Formatter("%(asctime)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -325,7 +344,7 @@ if __name__ == '__main__':
     training_mode = 'original' # 'original' or 'fine-tuning'
     base_model_path = './model/ssc-painting91-SSR-resnet50-2025-10-18-10-10-10-SSC-base-best.pth' # only for the fine-tuning mode
     ##########new add 20251018####################
-    SSCtrain(logger, model_path, current_time, model_name, dataSource, class_number, iterations, training_mode, base_model_path)
+    SSCtrain(logger, model_path, current_time, model_name, dataSource, class_number, iterations, training_mode, base_model_path, preFeaturePath, feature_name)
     logger.removeHandler(filehandler)
     logger.removeHandler(handler)
     logging.shutdown()
