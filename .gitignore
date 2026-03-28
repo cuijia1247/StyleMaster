@@ -13,6 +13,9 @@ model_old/
 log_backup/
 log/
 
+# Runtime PID files
+*.pid
+
 # Prediction outputs
 prediction/
 
