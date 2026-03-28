@@ -36,8 +36,8 @@ def parameter_load():
     classifier_lr = 0.0005          # 分类器学习率
     # classifier_training_gap = 30  # 旧版：每隔多少 epoch 训练一次分类器
     # classifier_test_gap = 30      # 旧版：每隔多少轮测试一次分类器
-    classifier_training_gap = 20    # 当前：每隔 20 个 epoch 触发一次分类器训练
-    classifier_test_gap = 10        # 当前：分类器每训练 10 轮评估一次测试集
+    classifier_training_gap = 40    # 当前：每隔 20 个 epoch 触发一次分类器训练
+    classifier_test_gap = 40        # 当前：分类器每训练 10 轮评估一次测试集
     model_name = ''                 # 模型名称前缀（由主程序传入覆盖）
     return (epochs, batch_size_, offset_bs, base_lr, image_size, classfier_iteration, classifier_lr, model_name, batch_size_sample,
             classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output, classifier_test_gap)
@@ -308,7 +308,7 @@ if __name__ == '__main__':
     # 处理带有子目录的数据集名称（如 webstyle/subImages）
     safe_dataset_name = dataset_name.replace('/', '_')
     model_name = f'ssc-{safe_dataset_name}'                     # 自动生成模型文件名前缀
-    feature_name = f'{safe_dataset_name}_resnet'                # 自动生成预提取特征文件名前缀
+    feature_name = f'{safe_dataset_name}_resnet50'                # 自动生成预提取特征文件名前缀
     preFeaturePath = './pretrainFeatures'                       # 预提取特征保存路径
 
     # 初始化日志记录器
