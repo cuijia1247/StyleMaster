@@ -64,8 +64,8 @@ def make_patched_parameter_load(epochs, base_lr, classifier_iteration, classifie
         batch_size_sample   = 'None'
         offset_bs           = 512
         image_size          = 64
-        classifier_training_gap = 40
-        classifier_test_gap     = 40
+        classifier_training_gap = 20
+        classifier_test_gap     = 20
         model_name          = ''
         return (epochs, batch_size_, offset_bs, base_lr, image_size,
                 classifier_iteration, classifier_lr, model_name, batch_size_sample,

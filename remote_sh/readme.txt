@@ -15,3 +15,11 @@
 ./remote_sh/manage_resnet50_param_optim.sh tail-current  # 看当前这组的详细 loss
 ./remote_sh/manage_resnet50_param_optim.sh result        # 看已完成的精度汇总
 
+
+启动：./remote_sh/manage_transformer_param_optim.sh start
+状态：./remote_sh/manage_transformer_param_optim.sh status
+看总进度：./remote_sh/manage_transformer_param_optim.sh tail
+看当前组合详细日志：./remote_sh/manage_transformer_param_optim.sh tail-current
+看结果：./remote_sh/manage_transformer_param_optim.sh result
+停止：./remote_sh/manage_transformer_param_optim.sh stop
+
