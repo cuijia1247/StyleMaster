@@ -314,6 +314,7 @@ if __name__ == '__main__':
     # 初始化日志记录器
     logger = logging.getLogger("my_logger")
     logger.setLevel(logging.DEBUG)                              # 日志级别：DEBUG（记录所有级别）
+    logger.propagate = False                                    # 禁止日志向根 logger 冒泡，防止产生重复 log 文件
     handler = logging.StreamHandler()                           # 控制台输出 handler
     # formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     formatter = logging.Formatter("%(asctime)s - %(message)s") # 日志格式：时间 + 消息
