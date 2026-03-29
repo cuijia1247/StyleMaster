@@ -19,9 +19,9 @@ import ssc_train_transformer
 # 参数搜索空间定义
 # =====================================================================
 SEARCH_SPACE = {
-    "epochs": list(range(50, 301, 50)),  # 50, 100, ..., 300
+    "epochs": list(range(50, 251, 50)),              # 50, 100, 150, 200, 250
     "base_lr": [round(v * 0.002, 4) for v in range(1, 6)],  # 0.002, 0.004, ..., 0.01
-    "classifier_iteration": list(range(100, 301, 50)),  # 100, 150, ..., 300
+    "classifier_iteration": list(range(80, 201, 40)),  # 80, 120, 160, 200
 }
 
 # classifier_lr 固定使用 transformer 主脚本默认值
@@ -73,8 +73,8 @@ def make_patched_parameter_load(
         batch_size_sample = "None"
         offset_bs = 512
         image_size = 224
-        classifier_training_gap = 2  # 避免 epoch=0/1 触发分类器评估，明确不在 epoch=0 测试
-        classifier_test_gap = 1
+        classifier_training_gap = 20  # 避免 epoch=0/1 触发分类器评估，明确不在 epoch=0 测试
+        classifier_test_gap = 20
         model_name = ""
         return (
             epochs,

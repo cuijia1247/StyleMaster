@@ -168,7 +168,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 logger.info('The epoch is %d, SSC train loss is %f', epoch, np.mean(train_loss))
 
             # 按间隔触发分类器训练（epoch 0 跳过，防止编码器未收敛）
-            if epoch % classifier_training_gap_ == 0 and epoch != 0 or epoch == epochs - 1:
+            if (epoch % classifier_training_gap_ == 0 and epoch != 0) or (epoch == epochs - 1 and epoch != 0):
 
                 # 每次重新初始化分类器（防止分类器记忆旧编码器的表示）
                 classifier = EfficientClassifier(ssc_output_, class_number).to(device)
