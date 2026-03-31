@@ -19,13 +19,14 @@ import ssc_train_transformer
 # 参数搜索空间定义
 # =====================================================================
 SEARCH_SPACE = {
-    "epochs": list(range(50, 251, 50)),              # 50, 100, 150, 200, 250
-    "base_lr": [round(v * 0.002, 4) for v in range(1, 6)],  # 0.002, 0.004, ..., 0.01
-    "classifier_iteration": list(range(80, 201, 40)),  # 80, 120, 160, 200
+    "epochs": list(range(40, 101, 20)),              # [40, 60, 80, 100]，共 4 个值
+    "base_lr": [round(v * 0.002 + 0.004, 4) for v in range(0, 6)],  # [0.004, 0.006, 0.008, 0.010, 0.012, 0.014]，共 6 个值
+    "classifier_iteration": list(range(40, 201, 40)),  # [40, 80, 120, 160, 200]，共 5 个值
+    # 总组合数: 4 × 6 × 5 = 120 组
 }
 
-# classifier_lr 固定使用 transformer 主脚本默认值
-FIXED_CLASSIFIER_LR = 0.01
+# classifier_lr 在搜索中固定不变，减少搜索维度
+FIXED_CLASSIFIER_LR = 0.001
 
 # =====================================================================
 # 固定配置（与 transformer 主脚本保持一致）
@@ -65,17 +66,17 @@ def make_patched_parameter_load(
     """生成覆盖 parameter_load() 的闭包，将指定超参数注入训练函数。"""
 
     def patched():
-        backbone = "vit_large_patch16_224"
-        ssc_backend = "swin_base_patch4_window7_224"
-        ssc_input = 1024
-        ssc_output = 1024
-        batch_size_ = 16
-        batch_size_sample = "None"
-        offset_bs = 512
-        image_size = 224
-        classifier_training_gap = 20  # 避免 epoch=0/1 触发分类器评估，明确不在 epoch=0 测试
-        classifier_test_gap = 20
-        model_name = ""
+        backbone = "vit_large_patch16_224"      # 仅用于日志记录，不参与模型构建
+        ssc_backend = "swin_base_patch4_window7_224"  # 实际使用的编码器 backend（已冻结，只训练 projector）
+        ssc_input = 1024                        # Swin-Base 输出特征维度
+        ssc_output = 1024                       # MLP projector 输出维度
+        batch_size_ = 832                       # 编码器训练 batch size（冻结 backend 后显存充足，可大幅扩大）
+        batch_size_sample = "None"              # 子图采样策略（当前未启用）
+        offset_bs = 512                         # lr 线性缩放基准 batch size，实际 lr = base_lr * batch_size / offset_bs
+        image_size = 64                         # 子图裁剪尺寸（会在 SscReg.forward 中 resize 至 224 再送入 Swin-Base）
+        classifier_training_gap = 4             # 每隔 4 个 epoch 触发一次分类器训练（epoch=0 跳过）
+        classifier_test_gap = 4                 # 分类器每训练 4 轮在测试集评估一次
+        model_name = ""                         # 由 run_single 传入覆盖，此处留空
         return (
             epochs,
             batch_size_,

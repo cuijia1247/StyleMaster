@@ -56,14 +56,20 @@ class SscReg(nn.Module):
             
         self.projector = MLP(input_size=input_size, output_size=output_size, depth=depth_projector)
         self.target_size = target_size
-    
+
+        # 冻结 backend 所有参数，只训练 projector
+        for param in self.backend.parameters():
+            param.requires_grad = False
+
     def forward(self, x):
         # 插值到目标尺寸 (默认 224x224)
         if x.shape[2] != self.target_size or x.shape[3] != self.target_size:
-            x = F.interpolate(x, size=(self.target_size, self.target_size), 
+            x = F.interpolate(x, size=(self.target_size, self.target_size),
                             mode='bilinear', align_corners=False)
-        
-        x = self.backend(x)
+
+        # backend 已冻结，用 no_grad 避免保存中间激活，节省显存
+        with torch.no_grad():
+            x = self.backend(x)
         x = self.projector(x)
         return x
 
