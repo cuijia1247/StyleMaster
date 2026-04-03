@@ -19,14 +19,14 @@ import ssc_train_transformer
 # 参数搜索空间定义
 # =====================================================================
 SEARCH_SPACE = {
-    "epochs": list(range(40, 101, 20)),              # [40, 60, 80, 100]，共 4 个值
-    "base_lr": [round(v * 0.002 + 0.004, 4) for v in range(0, 6)],  # [0.004, 0.006, 0.008, 0.010, 0.012, 0.014]，共 6 个值
-    "classifier_iteration": list(range(40, 201, 40)),  # [40, 80, 120, 160, 200]，共 5 个值
-    # 总组合数: 4 × 6 × 5 = 120 组
+    "epochs": [200],              # [80, 100, 120]，共 3 个值
+    "base_lr": [0.009],  # [0.009, 0.011, 0.013]，共 3 个值
+    "classifier_iteration": [300],               # [70, 100]，共 2 个值
+    # 总组合数: 3 × 3 × 2 = 18 组
 }
 
 # classifier_lr 在搜索中固定不变，减少搜索维度
-FIXED_CLASSIFIER_LR = 0.001
+FIXED_CLASSIFIER_LR = 0.0003
 
 # =====================================================================
 # 固定配置（与 transformer 主脚本保持一致）
@@ -74,8 +74,8 @@ def make_patched_parameter_load(
         batch_size_sample = "None"              # 子图采样策略（当前未启用）
         offset_bs = 512                         # lr 线性缩放基准 batch size，实际 lr = base_lr * batch_size / offset_bs
         image_size = 64                         # 子图裁剪尺寸（会在 SscReg.forward 中 resize 至 224 再送入 Swin-Base）
-        classifier_training_gap = 4             # 每隔 4 个 epoch 触发一次分类器训练（epoch=0 跳过）
-        classifier_test_gap = 4                 # 分类器每训练 4 轮在测试集评估一次
+        classifier_training_gap =  1            # 每隔 2 个 epoch 触发一次分类器训练（epoch=0 跳过）
+        classifier_test_gap = 1                 # 分类器每训练 2 轮在测试集评估一次
         model_name = ""                         # 由 run_single 传入覆盖，此处留空
         return (
             epochs,
