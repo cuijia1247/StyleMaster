@@ -378,49 +378,72 @@ def main():
     """
     Main function for feature extraction.
     直接在此函数内配置所有参数，无需命令行传参。
+    按顺序：先 ResNet，再 ViT（各加载一次模型，train/test 复用）。
     """
     # ==================== 参数配置区域 ====================
-    model_type = 'resnet'  # 'vit' 或 'resnet'
-    data_dir = '/home/cuijia1247/Codes/SubStyleClassfication/data/AVAstyle/train/'  # 数据目录路径
-    output_dir = '/home/cuijia1247/Codes/SubStyleClassfication/pretrainFeatures'  # 输出特征保存目录
-    dataset_name = 'AVAstyle_resnet_train'  # 输出文件名
-    batch_size = 64  # 批处理大小
-    image_size = 224  # 输入图像尺寸
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'  # 计算设备
-    
+    project_root = Path(__file__).resolve().parents[1]
+
+    # 同一批图像目录；输出前缀因 backbone 不同而不同
+    train_dir = '/mnt/codes/data/style/FashionStyle14/train'
+    test_dir = '/mnt/codes/data/style/FashionStyle14/test'
+
+    # (model_type, extraction_jobs)；jobs 内为 (data_dir, dataset_name 不含 _features.pkl)
+    extraction_plan = [
+        (
+            'resnet',
+            [
+                (train_dir, 'FashionStyle14_resnet50_train'),
+                (test_dir, 'FashionStyle14_resnet50_test'),
+            ],
+        ),
+        (
+            'vit',
+            [
+                (train_dir, 'FashionStyle14_vit_train'),
+                (test_dir, 'FashionStyle14_vit_test'),
+            ],
+        ),
+    ]
+
+    output_dir = str(project_root / 'pretrainFeatures')
+    batch_size = 64
+    image_size = 224
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
     # ViT 配置
     vit_model_name = 'vit_large_patch16_224'
-    vit_pretrained_path = 'pretrainModels/vit_large_patch16_224.pth'
-    
+    vit_pretrained_path = str(project_root / 'pretrainModels' / 'vit_large_patch16_224.pth')
+
     # ResNet 配置
-    resnet_model_name = 'resnet50'  # 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'
-    resnet_pretrained_path = None  # None则使用torchvision预训练权重
+    resnet_model_name = 'resnet50'
+    resnet_pretrained_path = None  # None 则使用 torchvision 预训练权重
     # =====================================================
-    
-    # 收集图像路径
-    image_paths, relative_paths = collect_image_paths(data_dir)
-    
-    # 加载模型
-    if model_type.lower() == 'vit':
-        model = load_vit_model(vit_model_name, vit_pretrained_path, device)
-        flatten = False
-    elif model_type.lower() == 'resnet':
-        model = load_resnet_model(resnet_model_name, resnet_pretrained_path, device)
-        flatten = True
-    else:
-        raise ValueError(f"Unsupported model_type: {model_type}")
-    
-    # 获取图像变换
+
     transform = get_image_transform(image_size)
-    
-    # 提取特征
-    feature_dict = extract_features(
-        model, image_paths, relative_paths, transform, 
-        device=device, batch_size=batch_size, flatten=flatten
-    )
-    
-    # 保存特征
-    save_features(feature_dict, output_dir, dataset_name)
+
+    for model_type, extraction_jobs in extraction_plan:
+        if model_type.lower() == 'vit':
+            model = load_vit_model(vit_model_name, vit_pretrained_path, device)
+            flatten = False
+        elif model_type.lower() == 'resnet':
+            model = load_resnet_model(resnet_model_name, resnet_pretrained_path, device)
+            flatten = True
+        else:
+            raise ValueError(f"Unsupported model_type: {model_type}")
+
+        for data_dir, dataset_name in extraction_jobs:
+            data_dir = os.path.abspath(data_dir.rstrip('/'))
+            if not os.path.isdir(data_dir):
+                raise FileNotFoundError(f"数据目录不存在: {data_dir}")
+            print(f"\n{'=' * 60}\n[{model_type}] 提取: {data_dir}\n输出名: {dataset_name}_features.pkl\n{'=' * 60}")
+            image_paths, relative_paths = collect_image_paths(data_dir)
+            if not image_paths:
+                raise RuntimeError(f"目录下未找到图像: {data_dir}")
+            feature_dict = extract_features(
+                model, image_paths, relative_paths, transform,
+                device=device, batch_size=batch_size, flatten=flatten,
+            )
+            save_features(feature_dict, output_dir, dataset_name)
 
 
 if __name__ == '__main__':

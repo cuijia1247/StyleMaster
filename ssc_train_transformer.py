@@ -37,8 +37,8 @@ def parameter_load():
     base_lr = 0.0001                                    # 基础学习率（当前值）
     image_size = 64                                    # 随机裁剪子图的边长（像素），Swin 标准输入尺寸
     # classfier_iteration = 180 # best
-    classfier_iteration = 200                           # 每次触发分类器训练时的迭代轮数
-    classifier_lr = 0.01                                # 分类器学习率
+    classfier_iteration = 100                           # 每次触发分类器训练时的迭代轮数
+    classifier_lr = 0.001                               # 分类器学习率
     # classifier_training_gap = 30 # best
     # classifier_test_gap = 30 # best
     classifier_training_gap = 5                         # 每隔多少个 epoch 触发一次分类器训练
@@ -190,7 +190,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # ==== 优化：预计算 K 份不同随机增强的 SSC 表示缓存 ====
                 # Dataset 改为懒加载后，每次迭代 trainloader 得到不同的随机 view，
                 # 构建 K 份缓存，分类器迭代时轮换使用，有效防止过拟合固定增强结果。
-                K = 4  # 缓存份数，时间代价为单份的 K 倍，但分类器迭代速度不变
+                K = 12  # 缓存份数，增加特征多样性以缓解对固定缓存的过拟合
                 train_ssc_caches = []
                 for _ in range(K):
                     cache = []
@@ -201,8 +201,10 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                             backbone_view = torch.stack(
                                 [train_feature_dict[n] for n in names], dim=0
                             ).to(device1)
-                            test = (backbone_view - model(view1)) + (backbone_view - model(view2))
-                            cache.append((test.cpu(), (label - 1)))
+                            ssc_view1 = model(view1)   # SSC 编码器对 view1 的输出
+                            ssc_view2 = model(view2)   # SSC 编码器对 view2 的输出
+                            # 缓存 backbone、两路 ssc view（投影降噪在分类器内完成）
+                            cache.append((backbone_view.cpu(), ssc_view1.cpu(), ssc_view2.cpu(), (label - 1)))
                     train_ssc_caches.append(cache)
 
                 # 测试集只需 1 份缓存（评估时不需要增强多样性）
@@ -214,8 +216,9 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         backbone_view = torch.stack(
                             [test_feature_dict[n] for n in names_], dim=0
                         ).to(device1)
-                        test = (backbone_view - model(view1)) + (backbone_view - model(view2))
-                        test_ssc_cache.append((test.cpu(), (label - 1)))
+                        ssc_view1 = model(view1)
+                        ssc_view2 = model(view2)
+                        test_ssc_cache.append((backbone_view.cpu(), ssc_view1.cpu(), ssc_view2.cpu(), (label - 1)))
                 # ============================================================================
 
                 # 分类器训练循环（按 i % K 轮换缓存，不再调用 model）
@@ -226,22 +229,24 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
 
                     # 遍历缓存训练集，更新分类器参数，同时顺带统计训练准确率
                     classifier.train()
-                    for test, label in train_ssc_cache:
-                        test  = test.to(device1)
-                        label = label.to(device1)
+                    for bb_feat, ssc_v1, ssc_v2, label in train_ssc_cache:
+                        bb_feat = bb_feat.to(device1)
+                        ssc_v1  = ssc_v1.to(device1)
+                        ssc_v2  = ssc_v2.to(device1)
+                        label   = label.to(device1)
 
-                        prediction = classifier(test)
+                        prediction = classifier(ssc_v1, ssc_v2, bb_feat)
                         style_loss = classifier_criterion(prediction, label)
                         classifier_optimizer.zero_grad()
                         style_loss.backward()
                         classifier_optimizer.step()
 
+                        trainstyle_loss.append(style_loss.item())  # 每个 batch 均记录
+
                         # 在同一遍内直接统计训练准确率，无需第二遍遍历
                         with torch.no_grad():
                             pred = prediction.data.max(1, keepdim=True)[1]
                             total_correct += pred.eq(label.data.view_as(pred)).cpu().sum()
-
-                    trainstyle_loss.append(style_loss.item())
 
                     # 打印训练集准确率
                     if i % classifier_training_gap_ == classifier_training_gap_ - 1:
@@ -253,10 +258,12 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                         classifier.eval()
 
                         with torch.no_grad():
-                            for test, label in test_ssc_cache:
-                                test  = test.to(device1)
-                                label = label.to(device1)
-                                prediction = classifier(test)
+                            for bb_feat, ssc_v1, ssc_v2, label in test_ssc_cache:
+                                bb_feat = bb_feat.to(device1)
+                                ssc_v1  = ssc_v1.to(device1)
+                                ssc_v2  = ssc_v2.to(device1)
+                                label   = label.to(device1)
+                                prediction = classifier(ssc_v1, ssc_v2, bb_feat)
                                 pred = prediction.data.max(1, keepdim=True)[1]
                                 test_correct += pred.eq(label.data.view_as(pred)).cpu().sum()
 
@@ -282,9 +289,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
 
                 total_loss += np.mean(trainstyle_loss)  # 累加本次分类器训练的平均损失
                 loss_count += 1                         # 计数器自增
-                # 用实际累加次数计算平均损失，避免硬编码分母导致数值失真
                 avg_loss = total_loss / loss_count if loss_count > 0 else 0.0
-                logger.info('The average loss is %f', avg_loss)
+                logger.info('The average loss is %.6e', avg_loss)
 
                 # 全部训练结束时保存最终模型（无论精度高低）
                 if epoch == epochs - 1 and iteration == iterations - 1:
