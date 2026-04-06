@@ -36,7 +36,7 @@ def parameter_load():
     base_lr                 = 0.001
     image_size              = 224
     classfier_iteration     = 100
-    classifier_lr           = 0.00005
+    classifier_lr           = 0.00003
     classifier_training_gap = 2
     classifier_test_gap     = 2
     model_name              = ''
