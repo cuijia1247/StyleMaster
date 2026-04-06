@@ -47,3 +47,6 @@ _续跑于 2026-04-05 23:59:15 | epochs=100, base_lr=0.001, image_size=112, cls_
 | 数据集 | 最佳准确率 | 最终准确率 | 训练时长(min) | 开始时间 | 状态 |
 |--------|-----------|-----------|--------------|----------|------|
 | Painting91 | 0.7185 | 0.6786 | 91.6 | 2026-04-05 23:59:15 | OK |
+| Pandora | 0.6088 | 0.5317 | 300.4 | 2026-04-06 01:30:53 | OK |
+| AVAstyle | -1.0000 | -1.0000 | 0.0 | 2026-04-06 06:31:15 | ERROR: Feature file not found: /home/idtrc/Home_Codes/SubStyleClassfication/pretrainFeatures/AVAstyle_vit_train_features.pkl |
+| Arch | -1.0000 | -1.0000 | 0.0 | 2026-04-06 06:31:16 | ERROR: Feature file not found: /home/idtrc/Home_Codes/SubStyleClassfication/pretrainFeatures/Arch_vit_train_features.pkl |

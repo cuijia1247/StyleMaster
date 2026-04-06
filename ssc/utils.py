@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torchvision.transforms as tr
 from PIL import Image
 
-def criterion(x, y, lam_ortho=1.0, lam_var=1.0, lam_redundancy=0.05, epsilon=1e-3, device=torch.device('cuda')):
+def criterion(x, y, lam_ortho=0.5, lam_var=1.0, lam_redundancy=0.1, epsilon=1e-3, device=torch.device('cuda')):
     """
     正交化损失：驱动 view1(x) 和 view2(y) 互相正交且非零，使两者成为独立的风格噪声方向。
       ortho_loss      : 最小化两视图的余弦相似度平方，驱动方向正交
