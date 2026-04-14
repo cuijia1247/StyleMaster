@@ -234,8 +234,8 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
                 # ============================================================================
 
                 # 早停参数：连续 patience 次评估测试精度不提升则退出
-                es_patience = 12                                                  # 早停容忍次数
-                es_no_improve = 5                                                # 当前连续未提升次数（每次触发重置为 0）
+                es_patience = 20                                                  # 早停容忍次数
+                es_no_improve = 10                                                # 当前连续未提升次数（每次触发重置为 0）
                 es_best_acc = 0.0                                                # 本次触发内的局部最优精度
 
                 # 分类器训练循环（按 i % K 轮换缓存，分类器训练期间不调用 SSC 编码器）

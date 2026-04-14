@@ -77,12 +77,12 @@ RUNS          = 5           # 每个数据集独立重复训练次数
 
 # ── 数据集配置（名称 → 类别数）────────────────────────────────────────────────
 DATASETS = [
-    ('Painting91',         13),
-    ('Pandora',            12),
-    ('AVAstyle',           14),
-    ('Arch',               25),
-    ('FashionStyle14',     14),
-    ('webstyle/subImages', 10),
+    # ('Painting91',         13),
+    # ('Pandora',            12),
+    # ('AVAstyle',           14),
+    # ('Arch',               25),
+    # ('FashionStyle14',     14),
+    ('webstyle', 10),
 ]
 
 DATA_ROOT        = '/mnt/codes/data/style/'
