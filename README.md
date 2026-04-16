@@ -43,6 +43,11 @@ SubStyleClassfication/
 ├── simsiam/                          # SimSiam 对比实现
 ├── I-JEPA-main/                      # I-JEPA 对比实现
 ├── HR/                               # 数据清洗、阈值分析脚本
+├── denoise/                          # 风格共识 / 去噪自编码 / ConCURL 对比实验（冻结主干特征 + 轻量头）
+│   ├── SSCAE.py / sscae_train.py     # CSCAE（K 路 SCAE 共识）+ 训练与六数据集评测
+│   ├── DAE.py / dae_train.py         # 堆叠 DAE（SDAE）+ 训练与六数据集评测
+│   ├── ConCURL.py / concurl_train.py # 投影 MLP + 分类头（ConCURL 式）+ 训练与六数据集评测
+│   └── *_result.md                   # 批量评测结果（本地生成，默认不提交）
 ├── ssc_train_resnet.py               # ResNet 版训练入口
 ├── ssc_train_transformer.py          # Transformer 版训练入口（原版损失）
 ├── ssc_train_transformer_add.py      # Transformer 版训练入口（add 版损失 + 新分类头）
@@ -199,6 +204,22 @@ python ssc_predict.py
 | BYOL | `byol/` | `byol_train.py` |
 | SimSiam | `simsiam/` | `simsiam_train.py` |
 | I-JEPA | `I-JEPA-main/` | `ijepa_train.py` |
+
+---
+
+## denoise：冻结主干上的风格分类基线
+
+以下脚本与 `traditional_train.py` 共用同一套 **冻结 ImageNet 预训练 backbone**（`build_backbone` + 一次特征缓存），在 **train/test 的 ImageFolder** 上训练轻量头并报告 **test 准确率**。六数据集批量评测时路径与类别数与 `remote_sh` 中约定一致（`Painting91`、`Pandora`、`AVAstyle`、`FashionStyle14`、`Arch`、`webstyle` 等）。
+
+| 脚本 | 模型要点 | 常用命令 |
+|------|----------|----------|
+| `denoise/sscae_train.py` | `CSCAE`：K 路 `SCAE` + 共识 latent + 分类损失 | `python denoise/sscae_train.py --benchmark_all` |
+| `denoise/dae_train.py` | `SDAEClassifier`：两层堆叠 DAE + 预训练 + 微调 | `python denoise/dae_train.py --benchmark_all` |
+| `denoise/concurl_train.py` | `ConCURLClassifier`：ProjectionMLP（L2）+ 线性分类 | `python denoise/concurl_train.py --benchmark_all` |
+
+**公共参数（示例）：** `--data_root` / `--num_classes`（单数据集）；`--benchmark_all` + `--data_base`（默认 `/mnt/codes/data/style/`）；`--backbone`（默认 `vgg16`）；`--run` / `--runs`（重复次数与 mean±std，默认 3）；`--result_md`（结果 Markdown 路径）。
+
+**传统线性探针（多 backbone 对比）：** `python traditional_train.py --backbone resnet50 --data_root <数据集根目录>`。
 
 ---
 

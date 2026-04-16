@@ -22,6 +22,9 @@ prediction/
 # HR author scripts folder
 HR/
 
+# denoise 批量评测生成的结果表（本地）
+denoise/*_result.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

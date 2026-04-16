@@ -195,3 +195,18 @@ class EfficientClassifier(nn.Module):
         bb_out       = self.bb_proj(noise_residual)         # 风格噪声残差 → 512
         fused        = torch.cat([denoised_out, bb_out], dim=-1)  # 拼接 → 1024
         return self.head(fused)                             # 分类 logit
+
+
+class Classifier_Simple(nn.Module):
+    """两层线性分类器：Linear → ReLU → Linear → ReLU，无 Dropout。
+    隐藏层维度 = input_feature // 2。
+    """
+    def __init__(self, input_feature: int, class_number: int):
+        super().__init__()
+        hidden = input_feature // 2
+        self.fc1 = nn.Linear(input_feature, hidden)
+        self.fc2 = nn.Linear(hidden, class_number)
+        self.act = nn.ReLU()
+
+    def forward(self, x):
+        return self.act(self.fc2(self.act(self.fc1(x))))

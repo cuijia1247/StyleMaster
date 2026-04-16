@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import logging
 import os
@@ -9,18 +11,56 @@ from torch import nn, optim
 from torch.utils.data import DataLoader, TensorDataset
 from torchvision import datasets, models, transforms
 
-from ssc.classifier import Classifier
+from ssc.classifier import Classifier_Simple
+
+# backbone名称 -> (特征维度, 输入分辨率)
+BACKBONE_CONFIGS: dict[str, tuple[int, int]] = {
+    "vgg16":        (4096, 224),
+    "vgg19":        (4096, 224),
+    "resnet50":     (2048, 224),
+    "resnet101":    (2048, 224),
+    "inception_v3": (2048, 299),
+    "vit_b_16":     (768,  224),
+    "vit_l_16":     (1024, 224),
+}
 
 
-def build_backbone(device: torch.device) -> nn.Module:
-    """构建 VGG16 预训练特征提取器（输出 4096 维特征）。"""
-    vgg = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
-    backbone = nn.Sequential(
-        vgg.features,
-        vgg.avgpool,
-        nn.Flatten(),
-        *list(vgg.classifier.children())[:-1],  # 去掉最后分类层，保留 4096 维 embedding
-    )
+def build_backbone(name: str, device: torch.device) -> nn.Module:
+    """构建冻结的预训练特征提取器，预训练权重缓存至 ./pretrainModels。"""
+    if name == "vgg16":
+        m = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
+        backbone = nn.Sequential(
+            m.features, m.avgpool, nn.Flatten(),
+            *list(m.classifier.children())[:-1],  # 去掉最后分类层，保留 4096 维
+        )
+    elif name == "vgg19":
+        m = models.vgg19(weights=models.VGG19_Weights.IMAGENET1K_V1)
+        backbone = nn.Sequential(
+            m.features, m.avgpool, nn.Flatten(),
+            *list(m.classifier.children())[:-1],
+        )
+    elif name == "resnet50":
+        m = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+        backbone = nn.Sequential(*list(m.children())[:-1], nn.Flatten())  # 去掉 FC 层
+    elif name == "resnet101":
+        m = models.resnet101(weights=models.ResNet101_Weights.IMAGENET1K_V1)
+        backbone = nn.Sequential(*list(m.children())[:-1], nn.Flatten())
+    elif name == "inception_v3":
+        m = models.inception_v3(weights=models.Inception_V3_Weights.IMAGENET1K_V1)
+        m.aux_logits = False  # 关闭辅助分类器
+        m.fc = nn.Identity()  # 替换分类头，输出 2048 维
+        backbone = m
+    elif name == "vit_b_16":
+        m = models.vit_b_16(weights=models.ViT_B_16_Weights.IMAGENET1K_V1)
+        m.heads = nn.Identity()  # 替换分类头，输出 768 维
+        backbone = m
+    elif name == "vit_l_16":
+        m = models.vit_l_16(weights=models.ViT_L_16_Weights.IMAGENET1K_V1)
+        m.heads = nn.Identity()  # 替换分类头，输出 1024 维
+        backbone = m
+    else:
+        raise ValueError(f"不支持的 backbone: {name}，可选: {list(BACKBONE_CONFIGS)}")
+
     backbone.to(device)
     backbone.eval()
     for p in backbone.parameters():
@@ -73,16 +113,21 @@ def build_feature_cache(
     return TensorDataset(features, labels)
 
 
-def build_base_name(data_root: str) -> str:
-    """构建统一命名基名：traditional-vgg16-数据集名-年-月-日-时-分-秒"""
+def build_base_name(backbone: str, data_root: str) -> str:
+    """构建统一命名基名：traditional-{backbone}-{数据集名}-{时间戳}"""
     dataset_name = os.path.basename(os.path.normpath(data_root))
     time_str = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    return f"traditional-vgg16-{dataset_name}-{time_str}"
+    return f"traditional-{backbone}-{dataset_name}-{time_str}"
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Traditional training with VGG16 + Classifier")
-    parser.add_argument("--data_root", type=str, default="/mnt/codes/data/style/Painting91")
+    parser = argparse.ArgumentParser(description="Traditional training with frozen backbone + Classifier")
+    parser.add_argument("--backbone", type=str, default="vgg16", choices=list(BACKBONE_CONFIGS),
+                        help="预训练特征提取器类型")
+    parser.add_argument("--data_root", type=str, default="/mnt/codes/data/style/Painting91",
+                        help="数据集根目录（需含 train/test 子目录）")
+    parser.add_argument("--num_classes", type=int, default=13,
+                        help="数据集类别数（Painting91=13）；<=0 时自动从数据集推断")
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--classifier_lr", type=float, default=3e-4)
     parser.add_argument("--classifier_iteration", type=int, default=100)
@@ -90,11 +135,17 @@ def main() -> None:
     parser.add_argument("--num_workers", type=int, default=4)
     args = parser.parse_args()
 
+    # 预训练权重缓存目录
+    os.environ.setdefault("TORCH_HOME", os.path.join(os.path.dirname(__file__), "pretrainModels"))
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs("model", exist_ok=True)
     os.makedirs("log", exist_ok=True)
+    os.makedirs("pretrainModels", exist_ok=True)
 
-    base_name = build_base_name(args.data_root)
+    feat_dim, input_size = BACKBONE_CONFIGS[args.backbone]
+
+    base_name = build_base_name(args.backbone, args.data_root)
     log_path = os.path.join("log", f"{base_name}.log")
 
     logger = logging.getLogger("traditional_train")
@@ -113,7 +164,7 @@ def main() -> None:
 
     transform = transforms.Compose(
         [
-            transforms.Resize((224, 224)),
+            transforms.Resize((input_size, input_size)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
@@ -140,9 +191,11 @@ def main() -> None:
         pin_memory=torch.cuda.is_available(),
     )
 
-    class_number = len(train_set.classes)
-    backbone = build_backbone(device)
-    logger.info("Extracting train/test features once with frozen VGG16 backbone...")
+    # 优先使用显式传入的类别数，否则从数据集自动推断
+    class_number = args.num_classes if args.num_classes > 0 else len(train_set.classes)
+    backbone = build_backbone(args.backbone, device)
+    logger.info("Extracting train/test features once with frozen %s backbone (feat_dim=%d)...",
+                args.backbone, feat_dim)
     train_cache_set = build_feature_cache(backbone, train_image_loader, device)
     test_cache_set = build_feature_cache(backbone, test_image_loader, device)
     logger.info("Feature cache ready: train=%d, test=%d", len(train_cache_set), len(test_cache_set))
@@ -163,14 +216,15 @@ def main() -> None:
         pin_memory=torch.cuda.is_available(),
     )
 
-    logger.info("Start training: data=%s, class_num=%d", args.data_root, class_number)
+    logger.info("Start training: backbone=%s, data=%s, class_num=%d",
+                args.backbone, args.data_root, class_number)
     logger.info("Config: runs=%d, classifier_iteration=%d", args.runs, args.classifier_iteration)
     logger.info("Log file: %s", log_path)
 
     run_best_accs = []
 
     for run_idx in range(1, args.runs + 1):
-        classifier = Classifier(input_feature=4096, class_number=class_number).to(device)
+        classifier = Classifier_Simple(input_feature=feat_dim, class_number=class_number).to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(classifier.parameters(), lr=args.classifier_lr)
 
@@ -215,11 +269,20 @@ def main() -> None:
         run_best_accs.append(best_acc)
         logger.info("[Run %d] best_test_acc=%.4f", run_idx, best_acc)
 
-    min_acc = float(np.min(run_best_accs))
-    std_acc = float(np.std(run_best_accs))
+        # 将保存的模型文件重命名，加入准确率（如 0.6702 → acc6702）
+        if best_acc > 0 and os.path.exists(save_path):
+            acc_int = int(round(best_acc * 10000))
+            new_save_path = os.path.join(
+                "model", f"{base_name}-run{run_idx}-acc{acc_int}.pth"
+            )
+            os.rename(save_path, new_save_path)
+            logger.info("[Run %d] Model renamed: %s", run_idx, new_save_path)
+
+    mean_acc = float(np.mean(run_best_accs))
+    std_acc  = float(np.std(run_best_accs))
     logger.info("5-run best acc list: %s", [round(x, 4) for x in run_best_accs])
-    logger.info("Final result (min+-std): %.4f+-%.4f", min_acc, std_acc)
-    print(f"Final result (min+-std): {min_acc:.4f}+-{std_acc:.4f}")
+    logger.info("Final result (mean+-std): %.4f+-%.4f", mean_acc, std_acc)
+    print(f"Final result (mean+-std): {mean_acc:.4f}+-{std_acc:.4f}")
 
 
 if __name__ == "__main__":
