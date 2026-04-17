@@ -3,7 +3,7 @@
 #       分类器将公共风格门控叠加到 backbone_feat 上进行增强融合分类。
 # 与 ssc_train_transformer.py 的核心区别：
 #   1. criterion → criterion_align（去掉 ortho_loss，改为对角对齐损失）
-#   2. EfficientClassifier → 来自 classifier_enhance_add.py（StyleEnhancer 门控增强）
+#   2. EfficientClassifier → classifier_enhance_add.py（四路融合 + 单视图风格增强）
 #   3. 其余训练流程、早停、缓存机制完全保持一致，便于公平对比
 
 import logging
@@ -52,7 +52,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
 
     与 ssc_train_transformer.SSCtrain 的唯一逻辑差异：
       - SSC 损失：criterion_align（一致性对齐）替代 criterion（正交化）
-      - 分类器：EfficientClassifier from classifier_enhance_add（StyleEnhancer 门控增强）
+      - 分类器：EfficientClassifier（四路：bb + view1/view2 增强 + 双视图 MLP）
     """
     logger.debug('=' * 110)
     logger.debug('SSC STYLE-ALIGNMENT TRAINING (utils_add + classifier_enhance_add)')
@@ -72,7 +72,7 @@ def SSCtrain(logger, model_path, current_time, opt_model_name, dataset, class_nu
 
     logger.info('dataset = %s', dataset)
     logger.info('[ADD] SSC loss = criterion_align (align + var, NO ortho)')
-    logger.info('[ADD] Classifier = StyleFusionClassifier (StyleEnhancer gate + 3-branch)')
+    logger.info('[ADD] Classifier = EfficientClassifier (4-branch fusion)')
     logger.info('epochs = %d', epochs)
     logger.info('batch_size = %d, offset_batch_size = %d', batch_size, offset_bs)
     logger.info('SSC backend = %s', ssc_backend_)

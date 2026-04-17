@@ -9,14 +9,42 @@ classifier_enhance_add.py — 共性风格增强融合分类器
 
 模块说明：
   StyleEnhancer   : 用双视图公共风格自适应增强 backbone 特征（门控加法）
-  StyleFusionClassifier : 三路融合分类头
-      路1：backbone_feat（原始全局语义）
-      路2：style_enhanced（风格增强后的 backbone）
-      路3：ssc_common（双视图平均公共风格，直接投影）
+  StyleEnhancer / SingleViewStyleEnhancer : 公共风格或单视图风格门控增强 backbone
+  EfficientClassifier : 四路融合（各 256，cat→1024→head）
+  RegionalWeightedPooling : 与 MCCFNet 一致；向量视作 (C,1,1)
+  EfficientRWPClassifier : 四路分支同 EfficientClassifier；head 中 Dropout 换 RWP
 """
 import torch
 import torch.nn.functional as F
 from torch import nn
+
+
+class RegionalWeightedPooling(nn.Module):
+    """
+    区域加权池化 (RWP)：与 MCCFNet/mccfnet_train.py 一致。
+    对特征图用 1×1 卷积产生空间权重，加权后全局平均池化。
+    当输入为 (B, C, 1, 1)（向量视作 1×1 空间图）时，等价于通道维度的软门控后再聚合。
+    """
+
+    def __init__(self, in_channels: int):
+        super().__init__()
+        self.spatial_weight_conv = nn.Conv2d(in_channels, 1, kernel_size=1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        weights = torch.sigmoid(self.spatial_weight_conv(x))
+        weighted_x = x * weights
+        out = F.adaptive_avg_pool2d(weighted_x, (1, 1)).view(x.size(0), -1)
+        return out
+
+
+class RegionalWeightedPoolingVec(nn.Module):
+    """对 (B, C) 向量应用 RegionalWeightedPooling：内部 reshape 为 (B, C, 1, 1)。"""
+    def __init__(self, channels: int):
+        super().__init__()
+        self.rwp = RegionalWeightedPooling(channels)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.rwp(x.unsqueeze(-1).unsqueeze(-1))
 
 
 class Classifier(nn.Module):
@@ -79,67 +107,140 @@ class StyleEnhancer(nn.Module):
         return enhanced, ssc_common
 
 
+class SingleViewStyleEnhancer(nn.Module):
+    """
+    单视图风格增强：与 StyleEnhancer 同结构，但风格方向仅来自单个 ssc_view（非双视图均值）。
+    enhanced = backbone + alpha * sigmoid(gate_fc(backbone)) * normalize(align(ssc_view))
+    """
+    def __init__(self, feat_dim: int):
+        super().__init__()
+        self.align = nn.Sequential(
+            nn.Linear(feat_dim, feat_dim, bias=False),
+            nn.LayerNorm(feat_dim),
+        )
+        self.gate_fc = nn.Linear(feat_dim, feat_dim)
+        self.alpha = nn.Parameter(torch.full((1,), 0.3))
+
+    def forward(self, backbone_feat: torch.Tensor, ssc_view: torch.Tensor) -> torch.Tensor:
+        style_dir = F.normalize(self.align(ssc_view), dim=-1)
+        gate = torch.sigmoid(self.gate_fc(backbone_feat))
+        return backbone_feat + self.alpha * gate * style_dir
+
+
 class EfficientClassifier(nn.Module):
     """
-    风格增强三路融合分类头（1024 维）：
+    四路融合分类头（256×4=1024 → head）：
 
-      路1 bb_proj(backbone_feat)         : 原始 ViT 全局语义，256 维
-      路2 enhanced_proj(style_enhanced)  : 风格增强后的 backbone（门控叠加公共风格），512 维
-      路3 ssc_proj(ssc_common)           : 双视图均值公共风格 0.5*(v1+v2)，256 维
-
-    三路 cat → 1024 → MLP head → class logit
+      路1：bb_proj(backbone_feat) — 原始全局语义，256
+      路2：ssc_view1 对 backbone 的单视图增强后再投影，256
+      路3：ssc_view2 对 backbone 的单视图增强后再投影，256
+      路4：concat(ssc_view1, ssc_view2) 经 MLP → 256
     """
     def __init__(self, input_feature, class_number):
         super().__init__()
 
-        # 公共风格增强模块（核心）
-        self.enhancer = StyleEnhancer(input_feature)
+        self.enhance_v1 = SingleViewStyleEnhancer(input_feature)
+        self.enhance_v2 = SingleViewStyleEnhancer(input_feature)
 
-        # 路1：原始 backbone 语义 → 256
+        # 路1：原始 backbone → 256（无 Dropout）
+        self.bb_proj = nn.Sequential(
+            nn.Linear(input_feature, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+        )
+        # 路2 / 路3：增强后 backbone → 256
+        self.v1_proj = nn.Sequential(
+            nn.Linear(input_feature, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+        )
+        self.v2_proj = nn.Sequential(
+            nn.Linear(input_feature, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+        )
+        # 路4：双视图拼接 → 256
+        self.ssc_pair_mlp = nn.Sequential(
+            nn.Linear(input_feature * 2, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+        )
+
+        # 三层 Linear：1024 → 512 → 256 → class_number（无 Dropout）
+        self.head = nn.Sequential(
+            nn.Linear(1024, 512),
+            nn.LayerNorm(512),
+            nn.GELU(),
+            nn.Linear(512, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+            nn.Linear(256, class_number),
+        )
+
+    def forward(self, ssc_view1, ssc_view2, backbone_feat):
+        feat_v1 = self.enhance_v1(backbone_feat, ssc_view1)
+        feat_v2 = self.enhance_v2(backbone_feat, ssc_view2)
+
+        out1 = self.bb_proj(backbone_feat)
+        out2 = self.v1_proj(feat_v1)
+        out3 = self.v2_proj(feat_v2)
+        out4 = self.ssc_pair_mlp(torch.cat([ssc_view1, ssc_view2], dim=-1))
+
+        fused = torch.cat([out1, out2, out3, out4], dim=-1)
+        return self.head(fused)
+
+
+class EfficientRWPClassifier(nn.Module):
+    """
+    与 EfficientClassifier 相同的四路分支与拼接；区别在 self.head：
+    Dropout(0.05) 换为 RegionalWeightedPoolingVec(256)。
+    """
+
+    def __init__(self, input_feature: int, class_number: int):
+        super().__init__()
+        self.enhance_v1 = SingleViewStyleEnhancer(input_feature)
+        self.enhance_v2 = SingleViewStyleEnhancer(input_feature)
+
         self.bb_proj = nn.Sequential(
             nn.Linear(input_feature, 256),
             nn.LayerNorm(256),
             nn.GELU(),
             nn.Dropout(0.1),
         )
-        # 路2：风格增强后的 backbone → 512
-        self.enhanced_proj = nn.Sequential(
-            nn.Linear(input_feature, 512),
-            nn.LayerNorm(512),
-            nn.GELU(),
-            nn.Dropout(0.1),
-        )
-        # 路3：双视图均值公共风格 → 256
-        self.ssc_proj = nn.Sequential(
+        self.v1_proj = nn.Sequential(
             nn.Linear(input_feature, 256),
             nn.LayerNorm(256),
             nn.GELU(),
-            nn.Dropout(0.1),
+            nn.Dropout(0.05),
         )
-        # 融合分类头：1024 → 512 → 256 → class_num
-        self.head = nn.Sequential(
-            nn.Linear(1024, 512),
-            nn.LayerNorm(512),
-            nn.GELU(),
-            nn.Dropout(0.15),
-
-            nn.Linear(512, 256),
+        self.v2_proj = nn.Sequential(
+            nn.Linear(input_feature, 256),
             nn.LayerNorm(256),
             nn.GELU(),
-            nn.Dropout(0.1),
-
+            nn.Dropout(0.05),
+        )
+        self.ssc_pair_mlp = nn.Sequential(
+            nn.Linear(input_feature * 2, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+            nn.Dropout(0.05),
+        )
+        self.head = nn.Sequential(
+            nn.Linear(1024, 256),
+            nn.LayerNorm(256),
+            nn.GELU(),
+            RegionalWeightedPoolingVec(256),
             nn.Linear(256, class_number),
         )
 
     def forward(self, ssc_view1, ssc_view2, backbone_feat):
-        # StyleEnhancer：提取公共风格并叠加到 backbone（丢弃返回的 ssc_common）
-        style_enhanced, _ = self.enhancer(backbone_feat, ssc_view1, ssc_view2)
-        # 路3 直接取双视图均值作为公共风格
-        ssc_common = 0.5 * (ssc_view1 + ssc_view2)
+        feat_v1 = self.enhance_v1(backbone_feat, ssc_view1)
+        feat_v2 = self.enhance_v2(backbone_feat, ssc_view2)
 
-        out1 = self.bb_proj(backbone_feat)        # 路1：原始语义 → 256
-        out2 = self.enhanced_proj(style_enhanced)  # 路2：风格增强语义 → 512
-        out3 = self.ssc_proj(ssc_common)           # 路3：公共风格均值 → 256
+        out1 = self.bb_proj(backbone_feat)
+        out2 = self.v1_proj(feat_v1)
+        out3 = self.v2_proj(feat_v2)
+        out4 = self.ssc_pair_mlp(torch.cat([ssc_view1, ssc_view2], dim=-1))
 
-        fused = torch.cat([out1, out2, out3], dim=-1)  # 拼接 → 1024
-        return self.head(fused)                        # 分类 logit
+        fused = torch.cat([out1, out2, out3, out4], dim=-1)
+        return self.head(fused)

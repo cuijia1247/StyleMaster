@@ -28,7 +28,8 @@ SubStyleClassfication/
 │   ├── Backend.py                    # ResNet backbone 封装
 │   ├── classifier.py                 # 分类头（Classifier / EfficientClassifier）
 │   ├── classifier_enhance.py         # 增强版分类头（StyleEnhancer 门控 + 多路融合）
-│   ├── classifier_enhance_add.py     # add 系列三路融合分类头（路1:256 + 路2:512 + 路3:256）
+│   ├── classifier_enhance_add.py     # add 系列四路融合 + SingleViewStyleEnhancer；EfficientRWPClassifier（head 内 RWP）
+│   ├── Sscreg_densenet169.py         # DenseNet169 冻结骨干 + 6ch 投影 SSC 编码器（1664→1664）
 │   ├── classifier_original.py        # 原始分类头存档
 │   ├── utils.py                      # 原版损失函数（VICReg + 正交化）
 │   └── utils_add.py                  # add 版损失函数（BarlowTwins + SupCon）
@@ -56,11 +57,18 @@ SubStyleClassfication/
 │   ├── logs/                         # 批量运行日志（本地，默认不提交）
 │   └── *_result.md                   # 评测汇总表（本地生成时可不提交）
 ├── remote_sh/                        # 远程/服务器批处理辅助脚本
+│   ├── run_add_ssc_train_vit_bat.sh / manage_add_ssc_train_vit_bat.sh  # add+ViT/Swin 六数据集批量
+│   ├── run_add_ssc_train_densenet_bat.sh / manage_add_ssc_train_densenet_bat.sh  # add+DenseNet169 六数据集×3 次
 │   ├── run_traditional_train_bat.sh / manage_traditional_train_bat.sh  # 传统线性探针批量
-│   └── *_bat_runner.py               # 辅助启动器
+│   ├── densenet_batch_result.md      # DenseNet 批量实验汇总（运行后追加）
+│   └── *_bat_runner.py               # 由 shell 生成或随仓库提供的启动器
+├── MCCFNet/                          # 多通道色彩融合：DenseNet169 + RWP + 线性头（6ch RGB+HSV 端到端）
+│   ├── mccfnet_train.py              # 单数据集 / 六数据集 benchmark
+│   └── run_mccfnet_train_bat.sh / manage_mccfnet_train_bat.sh
 ├── ssc_train_resnet.py               # ResNet 版训练入口
 ├── ssc_train_transformer.py          # Transformer 版训练入口（原版损失）
-├── ssc_train_transformer_add.py      # Transformer 版训练入口（add 版损失 + 新分类头）
+├── ssc_train_transformer_add.py      # Transformer 版训练入口（add 版损失 + 四路分类头）
+├── ssc_train_densnet169_add.py       # DenseNet169-6ch + add 损失 + 内存 GAP 缓存 + EfficientRWPClassifier
 ├── ssc_predict.py                    # 推理：计算 view1/view2 余弦相似度统计
 ├── SscDataSet_new.py                 # 数据集加载器（当前主用）
 ├── SscDataSet.py                     # 数据集加载器（旧版）
@@ -144,7 +152,9 @@ model = SscReg(backend='resnet50', input_size=2048, output_size=2048)
 |------|------|------|------|
 | `Classifier` | `classifier.py` | Linear×3 + SiLU + Dropout | 基础版 |
 | `EfficientClassifier` | `classifier_enhance.py` | 四路拼接（backbone / 残差 / 软正交去噪）+ MLP | Transformer 训练脚本当前所用 |
-| `EfficientClassifier` | `classifier_enhance_add.py` | 三路融合（256+512+256→1024）+ StyleEnhancer | add 版（当前实验） |
+| `EfficientClassifier` | `classifier_enhance_add.py` | 四路各 256（bb / view1 增强 / view2 增强 / 双视图 MLP）→1024→512→256→cls；无 Dropout | add 版 Transformer 脚本默认 |
+| `EfficientRWPClassifier` | `classifier_enhance_add.py` | 与上同四路；融合 head 中 Dropout 换 RegionalWeightedPooling | `ssc_train_densnet169_add.py` 默认 |
+| `StyleEnhancer` | `classifier_enhance_add.py` | 双视图公共风格门控增强（可供实验复用） | — |
 
 ---
 
@@ -156,7 +166,7 @@ model = SscReg(backend='resnet50', input_size=2048, output_size=2048)
 python ssc_train_transformer.py
 ```
 
-### add 版（BarlowTwins + SupCon 损失 + StyleFusion 分类头）
+### add 版（BarlowTwins + SupCon 损失 + 四路分类头）
 
 ```bash
 python ssc_train_transformer_add.py
@@ -174,6 +184,36 @@ python ssc_train_transformer_add.py
 | classifier_lr | 5e-5 | 5e-5 |
 
 训练日志 → `./log/`，最优模型 → `./model/`。
+
+### add 版 + DenseNet169（6 通道 RGB+HSV，无预提取 pkl）
+
+骨干为 ImageNet DenseNet169 冻结特征（GAP 1664 维），SSC 与分类器阶段使用内存缓存；分类头默认 `EfficientRWPClassifier`。
+
+```bash
+python ssc_train_densnet169_add.py
+```
+
+**六数据集 × 每库 3 次重复（服务器后台）：**
+
+```bash
+./remote_sh/run_add_ssc_train_densenet_bat.sh
+# 或
+./remote_sh/manage_add_ssc_train_densenet_bat.sh start
+```
+
+结果追加至 `remote_sh/densenet_batch_result.md`；进程管理：`manage_add_ssc_train_densenet_bat.sh {status|tail|stop|result}`。
+
+### MCCFNet（端到端监督基线）
+
+`MCCFNet/`：`DenseNet169` + **RegionalWeightedPooling** + 线性分类；输入 6ch（RGB+HSV），与六数据集 benchmark 约定一致。
+
+```bash
+python MCCFNet/mccfnet_train.py --data_root <含 train/test 的根目录> --num_classes <K>
+# 六数据集依次训练
+python MCCFNet/mccfnet_train.py --benchmark_all --data_base /mnt/codes/data/style/
+```
+
+批量后台：`./MCCFNet/run_mccfnet_train_bat.sh`（详见同目录 `manage_mccfnet_train_bat.sh`）。
 
 ---
 

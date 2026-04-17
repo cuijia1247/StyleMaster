@@ -14,10 +14,31 @@ utils_add.py — 共性风格增强策略的 SSC 损失函数与数据变换
                     反向同理。只在跨视图间计算，不在同视图内部对比，
                     专注于"两个视图之间同类应相近、异类应相远"的目标。
 """
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as tr
+from PIL import Image
 from torchvision.transforms import transforms
+
+try:
+    import cv2
+except ImportError:  # pragma: no cover
+    cv2 = None
+
+
+def _ssc_numpy_to_pil_rgb(img):
+    """
+    SscDataset.__getitem__ 传入的是 cv2 读入的 BGR numpy (H,W,3)；
+    torchvision 几何增强需要 PIL 或 tensor，不能直接用 numpy 喂 RandomResizedCrop。
+    ImageFolder 则已是 PIL RGB，原样返回。
+    """
+    if isinstance(img, np.ndarray):
+        if cv2 is None:
+            raise ImportError("_ssc_numpy_to_pil_rgb 需要 opencv-python (cv2)")
+        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(rgb)
+    return img
 
 
 def supcon_loss(x, y, labels, temperature=1.0):
@@ -153,3 +174,57 @@ class MultiViewDataInjector(object):
         if with_consistent_flipping:
             sample = self.random_flip(sample)
         return [transform(sample) for transform in self.transforms]
+
+
+class ToRgbHsv6Tensor:
+    """PIL → (6, H, W)，与 MCCFNet 一致：RGB[0,1] + OpenCV HSV 归一化。"""
+
+    def __call__(self, pil_img):
+        if cv2 is None:
+            raise ImportError("ToRgbHsv6Tensor 需要 opencv-python (cv2)")
+        rgb = np.array(pil_img.convert("RGB"))
+        hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+        rgb_t = torch.from_numpy(rgb).permute(2, 0, 1).float() / 255.0
+        h = torch.from_numpy(hsv[:, :, 0]).float() / 179.0
+        s = torch.from_numpy(hsv[:, :, 1]).float() / 255.0
+        v = torch.from_numpy(hsv[:, :, 2]).float() / 255.0
+        hsv_t = torch.stack([h, s, v], dim=0)
+        return torch.cat([rgb_t, hsv_t], dim=0)
+
+
+def get_ssc_transforms_rgb_hsv6(size, mean=None, std=None):
+    """
+    双视图 6 通道（RGB+HSV）增强，与 DenseNet169 六通道输入一致。
+    mean/std 默认前 3 维 ImageNet，后 3 维 HSV 用 0.5/0.25。
+    """
+    if mean is None:
+        mean = [0.485, 0.456, 0.406, 0.5, 0.5, 0.5]
+    if std is None:
+        std = [0.229, 0.224, 0.225, 0.25, 0.25, 0.25]
+    transformT = tr.Compose(
+        [
+            tr.Lambda(_ssc_numpy_to_pil_rgb),
+            tr.RandomResizedCrop(size=size, scale=(0.4, 0.8), ratio=(3 / 4, 4 / 3)),
+            tr.RandomRotation((-90, 90)),
+            ToRgbHsv6Tensor(),
+            tr.Normalize(mean, std),
+        ]
+    )
+    transformT1 = tr.Compose(
+        [
+            tr.Lambda(_ssc_numpy_to_pil_rgb),
+            tr.RandomResizedCrop(size=size, scale=(0.4, 0.8), ratio=(3 / 4, 4 / 3)),
+            tr.RandomRotation((-90, 90)),
+            ToRgbHsv6Tensor(),
+            tr.Normalize(mean, std),
+        ]
+    )
+    transformEvalT = tr.Compose(
+        [
+            tr.Lambda(_ssc_numpy_to_pil_rgb),
+            tr.Resize((size, size)),
+            ToRgbHsv6Tensor(),
+            tr.Normalize(mean, std),
+        ]
+    )
+    return transformT, transformT1, transformEvalT

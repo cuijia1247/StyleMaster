@@ -30,6 +30,10 @@ selfsupervised/logs/
 selfsupervised/simclr_bat.pid
 selfsupervised/barlowtwins_bat.pid
 
+# MCCFNet 批量：日志与 PID（本地）
+MCCFNet/logs/
+MCCFNet/mccfnet_train_bat.pid
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
