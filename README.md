@@ -48,6 +48,16 @@ SubStyleClassfication/
 │   ├── DAE.py / dae_train.py         # 堆叠 DAE（SDAE）+ 训练与六数据集评测
 │   ├── ConCURL.py / concurl_train.py # 投影 MLP + 分类头（ConCURL 式）+ 训练与六数据集评测
 │   └── *_result.md                   # 批量评测结果（本地生成，默认不提交）
+├── selfsupervised/                   # SimCLR / Barlow Twins 等自监督基线（六数据集 benchmark）
+│   ├── simclr_train.py               # SimCLR 预训练 + 线性探针
+│   ├── barlowtwins_train.py         # Barlow Twins + 线性探针
+│   ├── run_*_train_bat.sh           # nohup 批量训练（SSH 断连可续跑）
+│   ├── manage_*_train_bat.sh        # 启停 / tail 日志 / 查看结果表
+│   ├── logs/                         # 批量运行日志（本地，默认不提交）
+│   └── *_result.md                   # 评测汇总表（本地生成时可不提交）
+├── remote_sh/                        # 远程/服务器批处理辅助脚本
+│   ├── run_traditional_train_bat.sh / manage_traditional_train_bat.sh  # 传统线性探针批量
+│   └── *_bat_runner.py               # 辅助启动器
 ├── ssc_train_resnet.py               # ResNet 版训练入口
 ├── ssc_train_transformer.py          # Transformer 版训练入口（原版损失）
 ├── ssc_train_transformer_add.py      # Transformer 版训练入口（add 版损失 + 新分类头）
@@ -133,7 +143,7 @@ model = SscReg(backend='resnet50', input_size=2048, output_size=2048)
 | 类名 | 文件 | 结构 | 说明 |
 |------|------|------|------|
 | `Classifier` | `classifier.py` | Linear×3 + SiLU + Dropout | 基础版 |
-| `EfficientClassifier` | `classifier_enhance.py` | 多路投影 + LayerNorm + GELU | 增强版（原版） |
+| `EfficientClassifier` | `classifier_enhance.py` | 四路拼接（backbone / 残差 / 软正交去噪）+ MLP | Transformer 训练脚本当前所用 |
 | `EfficientClassifier` | `classifier_enhance_add.py` | 三路融合（256+512+256→1024）+ StyleEnhancer | add 版（当前实验） |
 
 ---
@@ -171,11 +181,13 @@ python ssc_train_transformer_add.py
 
 ### 原版：`ssc/utils.py` — `criterion()`
 
-$$\mathcal{L} = \mathcal{L}_{\text{var}} + \mathcal{L}_{\text{invar}} + \lambda_{\text{ortho}} \cdot \mathcal{L}_{\text{ortho}}$$
+$$\mathcal{L} = \lambda_{\text{ortho}} \mathcal{L}_{\text{ortho}} + \lambda_{\text{var}} \mathcal{L}_{\text{var}} + \lambda_{\text{redundancy}} \mathcal{L}_{\text{redundancy}}$$
 
-- **var_loss**：防止特征坍缩
-- **invar_loss**：MSE 约束两视图一致
-- **ortho_loss**：余弦相似度²，驱动两视图正交（已发现与 acc 负相关，add 版已去除）
+- **ortho_loss**：两视图 L2 归一化后余弦相似度的平方（默认 $\lambda_{\text{ortho}}=0.5$），驱动方向正交
+- **var_loss**：各维标准差下界，防止特征坍缩（默认 $\lambda_{\text{var}}=1.0$）
+- **redundancy_loss**：跨视图维度互相关矩阵的非对角项惩罚（默认 $\lambda_{\text{redundancy}}=0.1$），抑制跨维冗余
+
+（实现中**无**单独 MSE 视图不变项；与 acc 的关系可在 add 版中对比。）
 
 ### add 版：`ssc/utils_add.py` — `criterion_align()`
 
@@ -204,6 +216,17 @@ python ssc_predict.py
 | BYOL | `byol/` | `byol_train.py` |
 | SimSiam | `simsiam/` | `simsiam_train.py` |
 | I-JEPA | `I-JEPA-main/` | `ijepa_train.py` |
+
+### 自监督六数据集批量（`selfsupervised/`）
+
+与 `traditional_train.py` 相同的数据根目录与类别数约定，默认 **`--benchmark_all --runs 3`**，结果追加到对应 `*_result.md`。适合服务器 **nohup** 后台，断开 SSH 仍可继续。
+
+| 任务 | 训练脚本 | 后台启动 | 进程与日志管理 |
+|------|----------|----------|----------------|
+| SimCLR | `selfsupervised/simclr_train.py` | `./selfsupervised/run_simclr_train_bat.sh` | `./selfsupervised/manage_simclr_train_bat.sh {start\|stop\|tail\|result\|…}` |
+| Barlow Twins | `selfsupervised/barlowtwins_train.py` | `./selfsupervised/run_barlowtwins_train_bat.sh` | `./selfsupervised/manage_barlowtwins_train_bat.sh …` |
+
+单次前台调试可加参数：`./selfsupervised/run_simclr_train_bat.sh fg`。
 
 ---
 

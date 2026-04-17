@@ -25,6 +25,11 @@ HR/
 # denoise 批量评测生成的结果表（本地）
 denoise/*_result.md
 
+# selfsupervised SimCLR 批量：运行日志与 PID（本地）
+selfsupervised/logs/
+selfsupervised/simclr_bat.pid
+selfsupervised/barlowtwins_bat.pid
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
