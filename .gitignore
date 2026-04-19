@@ -19,6 +19,9 @@ log/
 # Prediction outputs
 prediction/
 
+# GradCAM：本地可视化脚本与数据，不提交到 GitHub
+GradCAM/
+
 # HR author scripts folder
 HR/
 

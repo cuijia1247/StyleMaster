@@ -83,6 +83,15 @@ SubStyleClassfication/
 └── requirements.txt
 ```
 
+### 仅本地、不提交远程的目录
+
+以下路径在 `.gitignore` 中配置，**克隆仓库后不会存在**，需在本地自行创建或从其他介质拷贝；也不会在 `git push` 时上传到 GitHub / Gitee：
+
+| 路径 | 说明 |
+|------|------|
+| `GradCAM/` | 本地 Grad-CAM++ 可视化脚本、测试图与输出（与主训练代码解耦，避免污染版本库） |
+| `data/`、`model/`、`pretrainFeatures/` 等 | 数据与权重（见上表及 `.gitignore`） |
+
 ---
 
 ## 安装
