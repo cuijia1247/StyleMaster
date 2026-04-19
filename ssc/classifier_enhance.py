@@ -125,20 +125,38 @@ class OrthoDenoiser(nn.Module):
         return backbone_feat - self.alpha1 * a1 * n1 - self.alpha2 * a2 * n2
 
     def forward_single(self, backbone_feat, ssc_view):
-        """单视图版：仅用 ssc_view 一路作为噪声方向，从 backbone_feat 中去除对应分量。"""
-        n = F.normalize(self.align1(ssc_view), dim=-1)                # 复用 align1，(B, D)
-        a = (backbone_feat * n).sum(dim=-1, keepdim=True)             # (B, 1)
+        """
+        单视图去噪，对应代码变量关系如下（与下方三行实现一致）::
+
+            n = F.normalize(self.align1(ssc_view), dim=-1)   # ‖n‖₂ = 1（最后一维）
+            a = (backbone_feat * n).sum(dim=-1, keepdim=True)
+
+            return backbone_feat - self.alpha1 * a * n
+
+        即：在 `backbone_feat` 上减去沿 `n` 方向的投影标量 `a` 的 `self.alpha1` 倍。
+        """
+        n = F.normalize(self.align1(ssc_view), dim=-1)
+        a = (backbone_feat * n).sum(dim=-1, keepdim=True)
         return backbone_feat - self.alpha1 * a * n
+
+    def forward_single_v2(self, backbone_feat, ssc_view):
+        """
+        与 `forward_single` 相同结构，仅 `self.align1`→`self.align2`，`self.alpha1`→`self.alpha2`::
+
+            n = F.normalize(self.align2(ssc_view), dim=-1)
+            a = (backbone_feat * n).sum(dim=-1, keepdim=True)
+
+            return backbone_feat - self.alpha2 * a * n
+        """
+        n = F.normalize(self.align2(ssc_view), dim=-1)
+        a = (backbone_feat * n).sum(dim=-1, keepdim=True)
+        return backbone_feat - self.alpha2 * a * n
 
 
 class EfficientClassifier(nn.Module):
     """
-    四路融合分类头（各路 256 维，拼接为 1024 维）：
-      - 路1 bb_proj(backbone_feat)            : 原始 ViT 全局语义
-      - 路2 diff_proj(backbone_feat-ssc_v1)   : 去除视图1风格后的语义残差
-      - 路3 diff_proj(backbone_feat-ssc_v2)   : 去除视图2风格后的语义残差（路2/3共享权重）
-      - 路4 ssc_avg_proj(avg(ssc_v1,ssc_v2))  : 双视图平均公共风格表示
-    四路 cat → 1024 → MLP head → class logit
+    四路融合（256×4→1024→head）。默认 `forward`：路1 `bb_proj`；路2 `forward_single`（align1）；
+    路3 `forward_single_v2`（align2）；路4 `residual_proj(bb−v1−v2)`。其它变体见类内注释。
     """
     def __init__(self, input_feature, class_number):
         super(EfficientClassifier, self).__init__()
@@ -149,42 +167,48 @@ class EfficientClassifier(nn.Module):
             nn.Linear(input_feature, branch),
             nn.LayerNorm(branch),
             nn.GELU(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
         )
         # 路2/3：backbone 减去单路 ssc_view 的残差，共享权重
         self.diff_proj = nn.Sequential(
             nn.Linear(input_feature, branch),
             nn.LayerNorm(branch),
             nn.GELU(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
         )
         # 路4：ssc_view1 与 ssc_view2 的平均（双视图公共风格）
         self.ssc_avg_proj = nn.Sequential(
             nn.Linear(input_feature, branch),
             nn.LayerNorm(branch),
             nn.GELU(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
         )
-        # OrthoDenoiser：forward_single 用于路2/3单视图去噪
+        # OrthoDenoiser：路2 用 forward_single(align1)，路3 用 forward_single_v2(align2)
         self.denoiser = OrthoDenoiser(input_feature)
-        # 路2/3 去噪后特征的投影（与 diff_proj 独立，语义不同）
+        # 路2/3：单视图去噪后 D→256
         self.denoised_proj = nn.Sequential(
             nn.Linear(input_feature, branch),
             nn.LayerNorm(branch),
             nn.GELU(),
             nn.Dropout(0.1),
         )
+        # 路4：对 (backbone - ssc_v1 - ssc_v2) 投影，突出去掉两路风格后的残差语义
+        self.residual_proj = nn.Sequential(
+            nn.Linear(input_feature, branch),
+            nn.LayerNorm(branch),
+            nn.GELU(),
+        )
         # 融合分类头：1024 → 512 → 256 → class_num
         self.head = nn.Sequential(
             nn.Linear(branch * 4, branch * 2),
             nn.LayerNorm(branch * 2),
             nn.GELU(),
-            nn.Dropout(0.15),
+            # nn.Dropout(0.15),
 
             nn.Linear(branch * 2, branch),
             nn.LayerNorm(branch),
             nn.GELU(),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.1),
 
             nn.Linear(branch, class_number),
         )
@@ -197,24 +221,29 @@ class EfficientClassifier(nn.Module):
     #     fused = torch.cat([out1, out2, out3, out4], dim=-1)                      # 拼接 → 1024
     #     return self.head(fused)                                                  # 分类 logit
 
-    # ── 版本2：简单差值残差（backbone-ssc_view），无 OrthoDenoiser ────────────────
-    def forward(self, ssc_view1, ssc_view2, backbone_feat):
-        out1 = self.bb_proj(backbone_feat)                                     # 路1：原始语义 → 256
-        out2 = self.diff_proj(backbone_feat - ssc_view1)                       # 路2：去除视图1风格的残差 → 256
-        out3 = self.diff_proj(backbone_feat - ssc_view2)                       # 路3：去除视图2风格的残差 → 256（共享权重）
-        out4 = self.denoised_proj(
-            self.denoiser(backbone_feat, ssc_view1, ssc_view2)                 # 路4：双视图去噪语义 → 256
-        )
-        fused = torch.cat([out1, out2, out3, out4], dim=-1)                    # 拼接 → 1024
-        return self.head(fused)
-
-    # ── 版本1：原始四路（OrthoDenoiser 双视图去噪 + ssc_proj 投影）────────────────
+    # ── 版本2：双视图降噪+DR（backbone-ssc_view），无 OrthoDenoiser ────────────────
     # def forward(self, ssc_view1, ssc_view2, backbone_feat):
     #     out1 = self.bb_proj(backbone_feat)                                     # 路1：原始语义 → 256
-    #     out2 = self.ssc_proj(ssc_view1)                                        # 路2：视图1 风格 → 256
-    #     out3 = self.ssc_proj(ssc_view2)                                        # 路3：视图2 风格 → 256（共享权重）
+    #     out2 = self.diff_proj(backbone_feat - ssc_view1)                       # 路2：去除视图1风格的残差 → 256
+    #     out3 = self.diff_proj(backbone_feat - ssc_view2)                       # 路3：去除视图2风格的残差 → 256（共享权重）
     #     out4 = self.denoised_proj(
     #         self.denoiser(backbone_feat, ssc_view1, ssc_view2)                 # 路4：双视图去噪语义 → 256
     #     )
     #     fused = torch.cat([out1, out2, out3, out4], dim=-1)                    # 拼接 → 1024
     #     return self.head(fused)
+    # ── 版本1：单视图降噪+非噪声区补充（backbone-ssc_view），无 OrthoDenoiser ────────────────
+    def forward(self, ssc_view1, ssc_view2, backbone_feat):
+        # 路1：全局语义支路
+        out1 = self.bb_proj(backbone_feat)
+        # 路2：view1 噪声方向 align1 + alpha1（forward_single）
+        out2 = self.denoised_proj(
+            self.denoiser.forward_single(backbone_feat, ssc_view1)
+        )
+        # 路3：view2 噪声方向 align2 + alpha2（forward_single_v2）
+        out3 = self.denoised_proj(
+            self.denoiser.forward_single_v2(backbone_feat, ssc_view2)
+        )
+        # 路4：显式减去两路 SSC 表征后的残差，经 residual_proj 压到 256（互补路2/3 的「去噪」支路）
+        out4 = self.residual_proj(backbone_feat - ssc_view1 - ssc_view2)
+        fused = torch.cat([out1, out2, out3, out4], dim=-1)
+        return self.head(fused)

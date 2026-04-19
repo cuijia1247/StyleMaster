@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# MCCFNet 六数据集批量训练（与 barlowtwins/simclr 六库一致；epochs=20；结果写入 MCCFNet/mccfnet_result.md）
+# MCCFNet 六数据集批量训练（与 barlowtwins/simclr 六库一致；默认 epochs=3；每库 5 次，结果含各次准确率与 mean±std，写入 MCCFNet/mccfnet_result.md）
 # 适合 SSH 离线：默认 nohup 后台。
 #
 # 用法（均在项目根目录执行）::
@@ -43,7 +43,8 @@ fi
 CMD=(
   "$PYTHON_BIN" "$ROOT/MCCFNet/mccfnet_train.py"
   --benchmark_all
-  --epochs 20
+  --benchmark_runs 5
+  --epochs 3
   --data_base "/mnt/codes/data/style/"
   --result_md "$RESULT_MD"
 )

@@ -204,7 +204,7 @@ def get_ssc_transforms_rgb_hsv6(size, mean=None, std=None):
     transformT = tr.Compose(
         [
             tr.Lambda(_ssc_numpy_to_pil_rgb),
-            tr.RandomResizedCrop(size=size, scale=(0.4, 0.8), ratio=(3 / 4, 4 / 3)),
+            tr.RandomResizedCrop(size=size, scale=(0.6, 0.8), ratio=(3 / 4, 4 / 3)),
             tr.RandomRotation((-90, 90)),
             ToRgbHsv6Tensor(),
             tr.Normalize(mean, std),
@@ -213,7 +213,7 @@ def get_ssc_transforms_rgb_hsv6(size, mean=None, std=None):
     transformT1 = tr.Compose(
         [
             tr.Lambda(_ssc_numpy_to_pil_rgb),
-            tr.RandomResizedCrop(size=size, scale=(0.4, 0.8), ratio=(3 / 4, 4 / 3)),
+            tr.RandomResizedCrop(size=size, scale=(0.6, 0.8), ratio=(3 / 4, 4 / 3)),
             tr.RandomRotation((-90, 90)),
             ToRgbHsv6Tensor(),
             tr.Normalize(mean, std),

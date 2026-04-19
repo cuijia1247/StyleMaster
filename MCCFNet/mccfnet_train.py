@@ -144,6 +144,19 @@ def train_one_epoch(
     return total_loss / max(n, 1)
 
 
+def nan_mean_std(accs: list[float]) -> tuple[float, float]:
+    """对含 nan（单次失败）的准确率列表求均值与样本标准差；全为 nan 时返回 (nan, nan)。"""
+    arr = np.asarray(accs, dtype=np.float64)
+    if np.all(np.isnan(arr)):
+        return float("nan"), float("nan")
+    m = float(np.nanmean(arr))
+    valid = arr[~np.isnan(arr)]
+    if valid.size < 2:
+        return m, 0.0
+    s = float(np.nanstd(arr, ddof=1))
+    return m, s
+
+
 def setup_torch_hub(root: str) -> None:
     hub_dir = os.path.join(root, "pretrainModels", "hub")
     os.makedirs(hub_dir, exist_ok=True)
@@ -153,28 +166,48 @@ def setup_torch_hub(root: str) -> None:
 
 def append_benchmark_markdown(
     result_path: str,
-    rows: list[tuple[str, int, float, str]],
+    rows: list[tuple[str, int, list[float], float, float, str]],
     data_base: str,
     argv_summary: str,
     epochs: int,
+    n_runs: int,
 ) -> None:
-    """rows: (label, num_classes, best_test_acc, data_root)"""
+    """
+    rows: (label, num_classes, acc_per_run, mean_acc, std_acc, data_root)
+    单次失败对应 acc 为 nan；mean/std 由主流程用 nanmean / nanstd(ddof=1) 算好传入。
+    """
     os.makedirs(os.path.dirname(os.path.abspath(result_path)), exist_ok=True)
     ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    run_headers = [f"run{i}" for i in range(1, n_runs + 1)]
+    # 列: Dataset, num_classes, run1..runK, mean±std, data_root → 共 4+n_runs 列
+    n_cols = 4 + n_runs
+    sep_row = "| " + " | ".join(["---"] * n_cols) + " |"
     lines = [
         "",
-        f"## MCCFNet 六数据集 (DenseNet169+RWP, epochs={epochs}) — {ts}",
+        f"## MCCFNet 六数据集 (DenseNet169+RWP, epochs={epochs}, 每库 {n_runs} 次) — {ts}",
         "",
         f"_data_base=`{data_base}`_",
         "",
         f"_命令: `{argv_summary}`_",
         "",
-        "| Dataset | num_classes | best_test_acc | data_root |",
-        "|---------|-------------|---------------|-----------|",
+        "| Dataset | num_classes | "
+        + " | ".join(run_headers)
+        + " | mean±std | data_root |",
+        sep_row,
     ]
-    for name, nc, acc, droot in rows:
-        acc_s = "FAILED" if acc != acc else f"{acc:.4f}"
-        lines.append(f"| {name} | {nc} | {acc_s} | `{droot}` |")
+    for name, nc, accs, mean_acc, std_acc, droot in rows:
+        cells = []
+        for a in accs:
+            cells.append("FAILED" if a != a else f"{a:.4f}")
+        if mean_acc != mean_acc:
+            ms = "FAILED"
+        else:
+            ms = f"{mean_acc:.4f}±{std_acc:.4f}"
+        lines.append(
+            f"| {name} | {nc} | "
+            + " | ".join(cells)
+            + f" | {ms} | `{droot}` |"
+        )
     lines.append("")
 
     with open(result_path, "a", encoding="utf-8") as f:
@@ -184,7 +217,7 @@ def append_benchmark_markdown(
 def train_single_dataset(args: Namespace, logger: logging.Logger) -> float:
     """
     训练单个数据集上的 MCCFNet，返回测试集最佳准确率。
-    端到端训练；线性分类头与骨干同时优化，「迭代」即外层 epoch（默认 20）。
+    端到端训练；线性分类头与骨干同时优化，「迭代」即外层 epoch（默认 10）。
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -286,8 +319,8 @@ def parse_args() -> Namespace:
     p.add_argument(
         "--epochs",
         type=int,
-        default=20,
-        help="训练轮数（端到端；含线性分类头）。六数据集批量默认 20。",
+        default=3,
+        help="训练轮数（端到端；含线性分类头）。六数据集批量默认 10。",
     )
     p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--weight_decay", type=float, default=1e-4)
@@ -311,6 +344,12 @@ def parse_args() -> Namespace:
         default="",
         help="benchmark 结果追加写入的 Markdown 路径；默认 MCCFNet/mccfnet_result.md",
     )
+    p.add_argument(
+        "--benchmark_runs",
+        type=int,
+        default=5,
+        help="--benchmark_all 时每个数据集重复训练次数，最终写入各次准确率与 mean±std（样本标准差 ddof=1）",
+    )
     return p.parse_args()
 
 
@@ -325,35 +364,50 @@ def main() -> None:
     result_md = args.result_md or os.path.join(root, "MCCFNet", "mccfnet_result.md")
 
     if args.benchmark_all:
+        if args.benchmark_runs < 1:
+            raise ValueError("--benchmark_runs 须 >= 1")
         argv_summary = shlex.join([sys.argv[0]] + sys.argv[1:])
-        rows: list[tuple[str, int, float, str]] = []
+        rows: list[tuple[str, int, list[float], float, float, str]] = []
         for rel, n_cls, label in BENCHMARK_DATASETS:
             args.data_root = os.path.join(os.path.normpath(args.data_base), rel.replace("/", os.sep))
             args.num_classes = n_cls
             dataset_name = os.path.basename(os.path.normpath(args.data_root))
-            time_str = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-            log_path = os.path.join(
-                "log", f"mccfnet-benchmark-{dataset_name}-{time_str}.log"
+            run_accs: list[float] = []
+            for run_idx in range(1, args.benchmark_runs + 1):
+                time_str = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+                log_path = os.path.join(
+                    "log",
+                    f"mccfnet-benchmark-{dataset_name}-run{run_idx}-{time_str}.log",
+                )
+                logger = logging.getLogger(f"mccfnet.{label}.run{run_idx}")
+                logger.setLevel(logging.INFO)
+                logger.propagate = False
+                logger.handlers.clear()
+                fmt = logging.Formatter("%(asctime)s - %(message)s")
+                sh = logging.StreamHandler()
+                sh.setFormatter(fmt)
+                logger.addHandler(sh)
+                fh = logging.FileHandler(log_path)
+                fh.setFormatter(fmt)
+                logger.addHandler(fh)
+                try:
+                    best = train_single_dataset(args, logger)
+                    run_accs.append(best)
+                    print(f"[{label}] run {run_idx}/{args.benchmark_runs} best_test_acc={best:.4f}")
+                except Exception as e:
+                    logger.exception("Dataset run failed: %s run %d", label, run_idx)
+                    run_accs.append(float("nan"))
+                    print(f"[{label}] run {run_idx}/{args.benchmark_runs} FAILED: {e}")
+            mean_acc, std_acc = nan_mean_std(run_accs)
+            rows.append(
+                (label, n_cls, run_accs, mean_acc, std_acc, os.path.abspath(args.data_root))
             )
-            logger = logging.getLogger(f"mccfnet.{label}")
-            logger.setLevel(logging.INFO)
-            logger.propagate = False
-            logger.handlers.clear()
-            fmt = logging.Formatter("%(asctime)s - %(message)s")
-            sh = logging.StreamHandler()
-            sh.setFormatter(fmt)
-            logger.addHandler(sh)
-            fh = logging.FileHandler(log_path)
-            fh.setFormatter(fmt)
-            logger.addHandler(fh)
-            try:
-                best = train_single_dataset(args, logger)
-                rows.append((label, n_cls, best, os.path.abspath(args.data_root)))
-                print(f"[{label}] best_test_acc={best:.4f}")
-            except Exception as e:
-                logger.exception("Dataset failed: %s", label)
-                rows.append((label, n_cls, float("nan"), os.path.abspath(args.data_root)))
-                print(f"[{label}] FAILED: {e}")
+            if mean_acc == mean_acc:
+                print(
+                    f"[{label}] 汇总: mean={mean_acc:.4f} std={std_acc:.4f} (n={args.benchmark_runs})"
+                )
+            else:
+                print(f"[{label}] 汇总: 全部 run 失败")
 
         append_benchmark_markdown(
             result_md,
@@ -361,6 +415,7 @@ def main() -> None:
             os.path.normpath(args.data_base) + os.sep,
             argv_summary,
             args.epochs,
+            args.benchmark_runs,
         )
         print(f"结果已追加写入: {result_md}")
         return

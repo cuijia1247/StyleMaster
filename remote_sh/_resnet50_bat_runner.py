@@ -1,4 +1,5 @@
-# ResNet50 批量训练 runner（由 run_ssc_train_resnet_bat.sh 生成）
+# ResNet50 批量训练 runner（由 run_ssc_train_resnet_bat.sh 每次启动时生成；超参见 ssc_train_resnet_copy.parameter_load）
+# 维护：修改批量逻辑请编辑本 shell 的 PYEOF，并与 remote_sh/_resnet50_bat_runner.py 保持一致后一并提交。
 import sys
 import os
 import logging
@@ -8,64 +9,56 @@ import torch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-import ssc_train_resnet
-
-# ── 最优超参数（参考 param_optim 网格搜索结果）──────────────
-EPOCHS            = 200
-BASE_LR           = 0.009
-CLS_ITERATION     = 200
-CLASSIFIER_LR     = 0.0002          # 与 param_optim.FIXED_CLASSIFIER_LR 保持一致
-# 与 ssc_train_resnet.py L39-40 保持一致
-CLS_TRAIN_GAP     = 10              # 每隔多少 epoch 触发一次分类器训练
-CLS_TEST_GAP      = 10              # 分类器每训练多少轮评估一次测试集
+import ssc_train_resnet_copy as ssc_train_resnet
 
 # ── 固定配置 ─────────────────────────────────────────────────
+# 训练超参一律来自 ssc_train_resnet_copy.parameter_load()，本文件不再覆盖。
+# ITERATIONS：parameter_load 未定义；与 ssc_train_resnet_copy.parse_train_args --iterations 默认一致（1）。
+# WebStyle：数据根为 DATA_ROOT/webstyle（与 traditional / MCCFNet 等一致），非 webstyle/subImages。
 DATASETS = [
+    ('Painting91',         13),
+    ('Pandora',            12),
+    ('AVAstyle',           14),
+    ('Arch',               25),
     ('FashionStyle14',     14),
-    ('webstyle', 10),     # WebStyle
+    ('webstyle',           10),
 ]
 
 DATA_ROOT        = '/mnt/codes/data/style/'
 MODEL_PATH       = os.path.join(ROOT, 'model') + '/'
 PRE_FEATURE_PATH = os.path.join(ROOT, 'pretrainFeatures')
-ITERATIONS       = 3
+ITERATIONS       = 1
+# 每数据集独立完整训练轮数；与 SSCtrain 的 dataset_repeat_runs 一致（每轮只计 best，汇总 mean±std）
+DATASET_REPEAT_RUNS = 5
 TRAINING_MODE    = 'original'
 BASE_MODEL_PATH  = '###'
 
-LOG_DIR     = os.path.join(ROOT, 'log')   # 与 ssc_train_resnet.py __main__ 保持一致
+LOG_DIR     = os.path.join(ROOT, 'log')   # 与 ssc_train_resnet_copy __main__ 一致
 RESULT_FILE = os.path.join(ROOT, 'remote_sh', 'resnet50_batch_result.md')
 
 os.makedirs(LOG_DIR, exist_ok=True)
 
 
-def make_patched_parameter_load(epochs, base_lr, classifier_iteration,
-                                classifier_lr=CLASSIFIER_LR):
+def _hparams_from_copy():
     """
-    与 param_optim.make_patched_parameter_load 结构完全一致：
-    显式命名全部字段，覆盖 ssc_train_resnet.parameter_load()。
+    读取 parameter_load() 元组字段，与 SSCtrain 内解包顺序一致（仅用于日志/命名/结果表头）。
     """
-    def patched():
-        backbone                = 'resnet50'
-        ssc_backend             = 'resnet50'
-        ssc_input               = 2048
-        ssc_output              = 2048
-        batch_size_             = 64
-        batch_size_sample       = 'None'
-        offset_bs               = 512
-        image_size              = 64
-        classifier_training_gap = CLS_TRAIN_GAP
-        classifier_test_gap     = CLS_TEST_GAP
-        model_name              = ''
-        return (epochs, batch_size_, offset_bs, base_lr, image_size,
-                classifier_iteration, classifier_lr, model_name, batch_size_sample,
-                classifier_training_gap, backbone, ssc_backend, ssc_input, ssc_output,
-                classifier_test_gap)
-    return patched
+    t = ssc_train_resnet.parameter_load()
+    return {
+        'epochs': t[0],
+        'batch_size': t[1],
+        'base_lr': t[3],
+        'image_size': t[4],
+        'cls_iter': t[5],
+        'cls_lr': t[6],
+        'cls_train_gap': t[9],
+        'cls_test_gap': t[14],
+    }
 
 
 def patch_skip_last_save():
     """
-    替换 ssc_train_resnet 模块内的 torch.save，
+    替换训练模块内的 torch.save，
     跳过文件名含 '-last.pth' 的末尾模型，只保留最佳模型（'-best.pth'）。
     返回原始 save 函数供 finally 恢复。
     """
@@ -76,7 +69,7 @@ def patch_skip_last_save():
             return
         orig_save(obj, path, *args, **kwargs)
 
-    # 只替换 ssc_train_resnet 模块内引用的 torch，不影响全局
+    # 只替换训练模块内引用的 torch，不影响全局
     ssc_train_resnet.torch.save = _save_best_only
     return orig_save
 
@@ -86,10 +79,7 @@ def restore_save(orig_save):
 
 
 def setup_logger(log_file):
-    """
-    与 param_optim.setup_logger 结构一致：独立 logger，避免 handler 累积。
-    命名格式与 ssc_train_resnet.py __main__ 一致：{model_name}-{timestamp}.log
-    """
+    """独立 logger，避免 handler 累积。"""
     logger = logging.getLogger(f"bat_{time.time()}")
     logger.setLevel(logging.INFO)
     logger.propagate = False
@@ -104,56 +94,55 @@ def setup_logger(log_file):
     return logger, fh, sh
 
 
-def init_result_file():
-    """初始化结果 Markdown 文件（首次创建；已存在则追加续跑标记）"""
-    if not os.path.exists(RESULT_FILE):
-        with open(RESULT_FILE, 'w', encoding='utf-8') as f:
-            f.write("# ResNet50 批量训练结果\n\n")
-            f.write(f"固定参数: epochs={EPOCHS}, base_lr={BASE_LR}, "
-                    f"cls_iteration={CLS_ITERATION}, "
-                    f"cls_train_gap={CLS_TRAIN_GAP}, cls_test_gap={CLS_TEST_GAP}\n\n")
-            f.write("| 数据集 | 最佳准确率 | 最终准确率 | 训练时长(min) | 开始时间 | 状态 |\n")
-            f.write("|--------|-----------|-----------|--------------|----------|------|\n")
+def write_batch_result_header():
+    """每次启动完整批量时覆盖写入表头（每库 DATASET_REPEAT_RUNS 轮 best + mean±std）。"""
+    hp = _hparams_from_copy()
+    with open(RESULT_FILE, 'w', encoding='utf-8') as f:
+        f.write("# ResNet50 批量训练结果\n\n")
+        f.write(
+            "每数据集独立重复完整训练 **"
+            + str(DATASET_REPEAT_RUNS)
+            + "** 次；每轮仅记录该轮 **best** 测试准确率，**不**汇总 last。"
+            " 末列 **mean±std** 为该库各轮 best 的均值 ± 样本标准差。\n\n"
+        )
+        f.write("超参来源: `ssc_train_resnet_copy.parameter_load()`\n\n")
+        f.write(
+            f"- epochs={hp['epochs']}, base_lr={hp['base_lr']}, image_size={hp['image_size']}\n"
+            f"- cls_iteration={hp['cls_iter']}, cls_lr={hp['cls_lr']}, "
+            f"cls_train_gap={hp['cls_train_gap']}, cls_test_gap={hp['cls_test_gap']}\n"
+            f"- 每数据集重复 DATASET_REPEAT_RUNS={DATASET_REPEAT_RUNS}，批量外层 ITERATIONS={ITERATIONS}\n\n"
+        )
+        f.write(
+            "| 数据集 | R1 | R2 | R3 | R4 | R5 | mean±std | 训练时长(min) | 开始时间 | 状态 |\n"
+            "|--------|-----|-----|-----|-----|-----|----------|--------------|----------|------|\n"
+        )
+
+
+def append_batch_row(dataset_name, run_bests, mean_b, std_b, elapsed_min, start_time, status):
+    # 表中展示名；兼容旧路径名 webstyle/subImages
+    label = (
+        'WebStyle'
+        if dataset_name in ('webstyle', 'webstyle/subImages')
+        else dataset_name
+    )
+    if len(run_bests) == DATASET_REPEAT_RUNS and status == 'OK':
+        rpart = " | ".join(f"{x:.4f}" for x in run_bests)
+        ms = f"{mean_b:.4f}±{std_b:.4f}"
     else:
-        with open(RESULT_FILE, 'a', encoding='utf-8') as f:
-            f.write(f"\n---\n_续跑于 {time.strftime('%Y-%m-%d %H:%M:%S')}_\n\n")
-            f.write("| 数据集 | 最佳准确率 | 最终准确率 | 训练时长(min) | 开始时间 | 状态 |\n")
-            f.write("|--------|-----------|-----------|--------------|----------|------|\n")
-
-
-def append_result(dataset_name, best_acc, last_acc, elapsed_min, start_time, status):
-    label = dataset_name.replace('webstyle/subImages', 'WebStyle')
+        rpart = " | ".join(["—"] * DATASET_REPEAT_RUNS)
+        ms = "—"
     with open(RESULT_FILE, 'a', encoding='utf-8') as f:
-        f.write(f"| {label} | {best_acc:.4f} | {last_acc:.4f} "
-                f"| {elapsed_min:.1f} | {start_time} | {status} |\n")
-
-
-def parse_accuracy(log_file):
-    """
-    从日志末行解析精度，格式（与 ssc_train_resnet.py L277 一致）：
-      'The best accuracy is 0.xxxx, and the last accuracy is 0.xxxx'
-    """
-    best_acc = last_acc = 0.0
-    with open(log_file, 'r', encoding='utf-8') as f:
-        for line in f:
-            if 'best accuracy is' in line and 'last accuracy is' in line:
-                try:
-                    seg      = line.split('best accuracy is')[1]
-                    best_acc = float(seg.split(',')[0].strip())
-                    last_acc = float(seg.split('last accuracy is')[1].strip())
-                except (IndexError, ValueError):
-                    pass
-    return best_acc, last_acc
+        f.write(
+            f"| {label} | {rpart} | {ms} | {elapsed_min:.1f} | {start_time} | {status} |\n"
+        )
 
 
 def run_dataset(dataset_name, class_num, run_idx, total):
-    """
-    单数据集训练入口，与 param_optim.run_single 结构对齐：
-      patch parameter_load → patch save → SSCtrain → 解析日志 → 还原
-    """
+    """patch save（跳过 last）→ SSCtrain（含 dataset_repeat_runs）→ 返回值写入结果表 → 还原 save"""
+    hp = _hparams_from_copy()
     safe_name    = dataset_name.replace('/', '_')
     current_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
-    model_name   = f'bat-{safe_name}-ep{EPOCHS}-lr{BASE_LR}-ci{CLS_ITERATION}'
+    model_name   = f'bat-{safe_name}-ep{hp["epochs"]}-lr{hp["base_lr"]}-ci{hp["cls_iter"]}'
     feature_name = f'{safe_name}_resnet50'
     log_file     = os.path.join(LOG_DIR, f'{model_name}-{current_time}.log')
 
@@ -161,34 +150,38 @@ def run_dataset(dataset_name, class_num, run_idx, total):
     logger.info('=' * 80)
     logger.info('[%d/%d] 开始训练: dataset=%s  class_num=%d',
                 run_idx, total, dataset_name, class_num)
-    logger.info('epochs=%d, base_lr=%s, cls_iteration=%d, '
-                'cls_train_gap=%d, cls_test_gap=%d',
-                EPOCHS, BASE_LR, CLS_ITERATION, CLS_TRAIN_GAP, CLS_TEST_GAP)
+    logger.info(
+        'hparams from parameter_load: epochs=%d, base_lr=%s, cls_iteration=%d, cls_lr=%s, '
+        'cls_train_gap=%d, cls_test_gap=%d, image_size=%d, outer_iterations=%d, dataset_repeat_runs=%d',
+        hp['epochs'], hp['base_lr'], hp['cls_iter'], hp['cls_lr'],
+        hp['cls_train_gap'], hp['cls_test_gap'], hp['image_size'], ITERATIONS,
+        DATASET_REPEAT_RUNS,
+    )
     logger.info('=' * 80)
 
-    # monkey-patch parameter_load（与 param_optim 策略完全一致）
-    ssc_train_resnet.parameter_load = make_patched_parameter_load(
-        EPOCHS, BASE_LR, CLS_ITERATION)
     orig_save = patch_skip_last_save()  # 只保存最佳模型
 
     data_source = os.path.join(DATA_ROOT, dataset_name) + '/'
     t_start     = time.time()
     start_time  = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-    best_acc    = last_acc = 0.0
-    status      = 'OK'
+    run_bests: list = []
+    mean_b = std_b = 0.0
+    status = 'OK'
 
     try:
-        ssc_train_resnet.SSCtrain(
+        run_bests, mean_b, std_b = ssc_train_resnet.SSCtrain(
             logger, MODEL_PATH, current_time, model_name,
             data_source, class_num, ITERATIONS,
             TRAINING_MODE, BASE_MODEL_PATH,
-            PRE_FEATURE_PATH, feature_name
+            PRE_FEATURE_PATH, feature_name,
+            train_args=None,
+            dataset_repeat_runs=DATASET_REPEAT_RUNS,
         )
-        best_acc, last_acc = parse_accuracy(log_file)
     except Exception as e:
         logger.error('训练异常: %s', str(e))
         status = f'ERROR: {e}'
-        best_acc = last_acc = -1.0
+        run_bests = []
+        mean_b = std_b = 0.0
     finally:
         restore_save(orig_save)         # 还原 torch.save，不影响后续数据集
         logger.removeHandler(fh)
@@ -196,25 +189,33 @@ def run_dataset(dataset_name, class_num, run_idx, total):
         fh.close()
 
     elapsed_min = (time.time() - t_start) / 60.0
-    return best_acc, last_acc, elapsed_min, start_time, status
+    return run_bests, mean_b, std_b, elapsed_min, start_time, status
 
 
 def main():
-    init_result_file()
+    write_batch_result_header()
     total = len(DATASETS)
-    print(f"共 {total} 个数据集，依次开始批量训练...")
+    print(
+        f"共 {total} 个数据集，每库 {DATASET_REPEAT_RUNS} 轮（仅记录每轮 best，汇总 mean±std）..."
+    )
 
     for idx, (ds_name, cls_num) in enumerate(DATASETS, start=1):
         print(f"\n>>> [{idx}/{total}] 开始: {ds_name}")
-        best_acc, last_acc, elapsed_min, start_time, status = \
-            run_dataset(ds_name, cls_num, idx, total)
-        append_result(ds_name, best_acc, last_acc, elapsed_min, start_time, status)
-        print(f"<<< [{idx}/{total}] 完成: {ds_name}  "
-              f"best={best_acc:.4f}  last={last_acc:.4f}  "
-              f"{elapsed_min:.1f}min  [{status}]")
+        run_bests, mean_b, std_b, elapsed_min, start_time, status = run_dataset(
+            ds_name, cls_num, idx, total
+        )
+        append_batch_row(ds_name, run_bests, mean_b, std_b, elapsed_min, start_time, status)
+        if len(run_bests) == DATASET_REPEAT_RUNS and status == 'OK':
+            print(
+                f"<<< [{idx}/{total}] 完成: {ds_name}  mean±std={mean_b:.4f}±{std_b:.4f}  "
+                f"{elapsed_min:.1f}min  [{status}]"
+            )
+        else:
+            print(f"<<< [{idx}/{total}] 完成: {ds_name}  {elapsed_min:.1f}min  [{status}]")
 
     print(f"\n全部完成，结果已写入: {RESULT_FILE}")
 
 
 if __name__ == '__main__':
     main()
+

@@ -14,7 +14,7 @@ StyleMaster 是一个面向风格的特征学习框架，由两部分组成：
 
 SSC 核心思想：将同一幅画的两个随机裁剪子图（view1 / view2）送入 SSC 编码器，利用自监督损失约束特征空间，再训练轻量分类头完成风格判别。
 
-支持数据集：`Painting91` · `AVAstyle` · `WikiArt3` · `FashionStyle14` · `Pandora` · `Arch` · `artbench`
+支持数据集：`Painting91` · `AVAstyle` · `WikiArt3` · `FashionStyle14` · `Pandora` · `Arch` · `WebStyle`（数据根下目录名 `webstyle`）· `artbench`
 
 ---
 
@@ -57,15 +57,18 @@ SubStyleClassfication/
 │   ├── logs/                         # 批量运行日志（本地，默认不提交）
 │   └── *_result.md                   # 评测汇总表（本地生成时可不提交）
 ├── remote_sh/                        # 远程/服务器批处理辅助脚本
+│   ├── run_ssc_train_resnet_bat.sh / manage_ssc_train_resnet_bat.sh  # ResNet50+预提取特征 SSC，六数据集×每库 5 轮 best
+│   ├── resnet50_batch_result.md      # 上项批量汇总（R1–R5 + mean±std，运行后写入）
 │   ├── run_add_ssc_train_vit_bat.sh / manage_add_ssc_train_vit_bat.sh  # add+ViT/Swin 六数据集批量
 │   ├── run_add_ssc_train_densenet_bat.sh / manage_add_ssc_train_densenet_bat.sh  # add+DenseNet169 六数据集×3 次
+│   ├── run_ssc_train_densenet_bat.sh / manage_ssc_train_densenet_bat.sh  # DenseNet169 SSC 六数据集批量（如启用）
 │   ├── run_traditional_train_bat.sh / manage_traditional_train_bat.sh  # 传统线性探针批量
-│   ├── densenet_batch_result.md      # DenseNet 批量实验汇总（运行后追加）
+│   ├── densenet_batch_result.md / ssc_densenet169_batch_result.md  # DenseNet 系列批量结果
 │   └── *_bat_runner.py               # 由 shell 生成或随仓库提供的启动器
 ├── MCCFNet/                          # 多通道色彩融合：DenseNet169 + RWP + 线性头（6ch RGB+HSV 端到端）
 │   ├── mccfnet_train.py              # 单数据集 / 六数据集 benchmark
 │   └── run_mccfnet_train_bat.sh / manage_mccfnet_train_bat.sh
-├── ssc_train_resnet.py               # ResNet 版训练入口
+├── ssc_train_resnet_copy.py          # ResNet50 版训练入口（冻结 ResNet 特征 pkl + SSC + 分类头）
 ├── ssc_train_transformer.py          # Transformer 版训练入口（原版损失）
 ├── ssc_train_transformer_add.py      # Transformer 版训练入口（add 版损失 + 四路分类头）
 ├── ssc_train_densnet169_add.py       # DenseNet169-6ch + add 损失 + 内存 GAP 缓存 + EfficientRWPClassifier
@@ -184,6 +187,30 @@ python ssc_train_transformer_add.py
 | classifier_lr | 5e-5 | 5e-5 |
 
 训练日志 → `./log/`，最优模型 → `./model/`。
+
+### ResNet50 + 预提取特征（`ssc_train_resnet_copy.py`）
+
+在 **ImageNet ResNet50 预提取特征**（`./pretrainFeatures/{数据集安全名}_resnet50_{train,test}_features.pkl`）上训练 SSC 编码器与分类头；超参默认来自本文件内 `parameter_load()`，也可用命令行覆盖（见 `parse_train_args()`）。
+
+```bash
+# 单数据集（示例）
+python ssc_train_resnet_copy.py \
+  --dataset_name Painting91 \
+  --data_root /path/to/style/ \
+  --pre_feature_path ./pretrainFeatures \
+  --dataset_repeat_runs 1
+```
+
+- **`--dataset_repeat_runs`**：同一数据集独立重复完整训练次数；每轮仅统计该轮 **best** 测试准确率，多轮时在日志中输出 `[RUN_BEST]` / `[DATASET_SUMMARY]`（各轮 best 的 **mean±std**）。批量 runner 默认 **5**。
+- **WebStyle**：请使用数据子目录 **`webstyle`**（即 `{data_root}/webstyle/train|test`），与 `traditional_train` / `MCCFNet` 等一致；历史路径 `webstyle/subImages` 仍在类别映射中兼容，但批量脚本已改为 `webstyle`。
+- 服务器 **六数据集顺序批量**（每库 5 轮，结果表含 R1–R5 与 mean±std）：
+
+```bash
+./remote_sh/run_ssc_train_resnet_bat.sh
+# 进程与日志：./remote_sh/manage_ssc_train_resnet_bat.sh {status|tail|stop|…}
+```
+
+汇总表：`remote_sh/resnet50_batch_result.md`。单机快捷封装可参考 `remote_sh/run_ssc_resnet.sh`。
 
 ### add 版 + DenseNet169（6 通道 RGB+HSV，无预提取 pkl）
 

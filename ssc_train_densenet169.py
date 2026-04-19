@@ -1,15 +1,11 @@
-# SSC 共性风格增强（add 版）：主干为 DenseNet169 features + 6 通道 RGB+HSV 输入
-# 与 ssc_train_transformer_add.py 流程一致，仅替换：
-#   - SscReg → SscRegDensenet169（1664→1664 projector）
-#   - 数据变换 → get_ssc_transforms_rgb_hsv6
-# backbone 特征：不读 ./pretrainFeatures，用当前模型冻结的 DenseNet169 features+GAP 在线提取，
-# 按文件名缓存到内存 dict（与原先 pkl 用法一致）。
+# SSC + 冻结 DenseNet169 骨干 + 可训练 projector；损失与数据增强来自 ssc.utils（与 ssc_train_transformer.py 一致）。
+# 与 ssc_train_densnet169_add.py 的差异：
+#   - utils.criterion（VICReg 风格三项）替代 utils_add.criterion_align
+#   - get_ssc_transforms（RGB+ImageNet 归一化）替代 get_ssc_transforms_rgb_hsv6（6ch）
+#   - SscRegDensenet169(in_channels=3)，内存 GAP 缓存仍为 1664 维
+#   - 分类器：ssc.classifier_enhance.EfficientClassifier（与 transformer 脚本一致）
 #
-# 分类器阶段耗时说明（与 transformer_add 相同结构）：
-#   每次触发分类器训练前，会用 trainloader 连续跑 K 遍（默认见 parameter_load），
-#   每遍对全训练集做「view1+view2」两次 SSC 前向以写入缓存 → 约 K×2×ceil(N/batch) 次 DenseNet+MLP。
-#   若此处很慢：① 增大 dataloader_num_workers；② 适当减小 classifier_cache_k（如 4～6）；
-#   ③ 已启用 cudnn.benchmark（固定分辨率时加速卷积）。
+# backbone 特征：不读 ./pretrainFeatures，在线提取 DenseNet169 features+GAP 至内存 dict。
 
 import logging
 import os
@@ -24,9 +20,9 @@ from torch.utils.data import DataLoader
 from torchvision import datasets
 
 from ssc.Sscreg_densenet169 import SscRegDensenet169
-from ssc.utils_add import criterion_align, get_ssc_transforms_rgb_hsv6, MultiViewDataInjector
+from ssc.utils import criterion, get_ssc_transforms, MultiViewDataInjector
 from SscDataSet_new import SscDataset
-from ssc.classifier_enhance_add import EfficientClassifier
+from ssc.classifier_enhance import EfficientClassifier
 
 device0 = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 device1 = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
@@ -34,9 +30,13 @@ device1 = torch.device("cuda:0") if torch.cuda.is_available() else torch.device(
 if torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True
 
+# ImageNet RGB 归一化（与 ssc_train_transformer.py 中 get_ssc_transforms 一致）
+_IMAGENET_MEAN = (0.485, 0.456, 0.406)
+_IMAGENET_STD = (0.229, 0.224, 0.225)
+
 
 def parameter_load():
-    """DenseNet169 池化维 1664；SSC 输出与 backbone 缓存同维以便 EfficientRWPClassifier。"""
+    """DenseNet169 池化维 1664；超参风格对齐 densnet169_add / transformer。"""
     epochs = 20
     ssc_input = 1664
     ssc_output = 1664
@@ -48,11 +48,9 @@ def parameter_load():
     classifier_lr = 0.00004
     classifier_training_gap = 2
     classifier_test_gap = 2
-    backbone_cache_workers = 8  # 构建内存 backbone 缓存时的 DataLoader workers
-    # SSC 训练 + 分类器缓存构建共用；>0 可并行做 numpy→PIL→6ch 与增强，显著缩短「卡很久」的等待
+    backbone_cache_workers = 8
     dataloader_num_workers = 8
-    # 预计算 K 份不同随机增强的 SSC 缓存；K 与分类器阶段最前段耗时近似成正比（可改为 4～6 换速度）
-    classifier_cache_k = 4
+    classifier_cache_k = 8
     model_name = ""
     return (
         epochs,
@@ -73,6 +71,10 @@ def parameter_load():
     )
 
 
+# 供 `if __name__ == "__main__"` 与 `remote_sh/run_ssc_train_densenet_bat.sh` 中 SSCtrain(..., iterations, ...) 共用
+DEFAULT_SSC_OUTER_ITERATIONS = 2
+
+
 def _setup_hub(root: str) -> None:
     hub_dir = os.path.join(root, "pretrainModels", "hub")
     os.makedirs(hub_dir, exist_ok=True)
@@ -82,7 +84,6 @@ def _setup_hub(root: str) -> None:
 
 @torch.no_grad()
 def _backbone_gap_vec(model: nn.Module, x: torch.Tensor) -> torch.Tensor:
-    """与 SscRegDensenet169.forward 中冻结段一致：features → ReLU → GAP → (B, 1664)。"""
     feat = model.features(x)
     feat = F.relu(feat, inplace=True)
     return F.adaptive_avg_pool2d(feat, (1, 1)).flatten(1)
@@ -98,10 +99,6 @@ def build_dense_backbone_cache_in_memory(
     num_workers: int,
     logger: logging.Logger,
 ) -> dict:
-    """
-    用当前 DenseNet169 冻结骨干对 train/test 全部图像做一次前向，按「文件名」缓存 1664 维向量到内存。
-    与 SscDataset 返回的 name 字段一致（各类文件夹内 basename）。
-    """
     root = os.path.join(dataset_root.rstrip("/\\"), split)
     if not os.path.isdir(root):
         raise FileNotFoundError(f"未找到目录: {root}")
@@ -147,7 +144,7 @@ def SSCtrain(
     base_model_path,
 ):
     logger.debug("=" * 110)
-    logger.debug("SSC STYLE-ALIGNMENT (DenseNet169-6ch + utils_add + classifier_enhance_add)")
+    logger.debug("SSC (DenseNet169-3ch + ssc.utils + classifier_enhance)")
     logger.debug("=" * 110)
     logger.info("SSC parameter setting up...")
 
@@ -180,9 +177,9 @@ def SSCtrain(
     model_name_ = opt_model_name
 
     logger.info("dataset = %s", dataset)
-    logger.info("[ADD+D169] SSC loss = criterion_align (align + var + supcon)")
-    logger.info("[ADD+D169] Backbone feats = DenseNet169 6ch GAP 1664-d (内存缓存，无 pkl)")
-    logger.info("[ADD+D169] Classifier = EfficientClassifier (4-branch fusion)")
+    logger.info("[D169] SSC loss = criterion (ortho + var + redundancy) from ssc.utils")
+    logger.info("[D169] Backbone feats = DenseNet169 RGB GAP 1664-d (内存缓存)")
+    logger.info("[D169] Classifier = EfficientClassifier (classifier_enhance)")
     logger.info("epochs = %d", epochs)
     logger.info("batch_size = %d, offset_batch_size = %d", batch_size, offset_bs)
     logger.info("SSC DenseNet169: input_dim=%d, projector_out=%d", ssc_input_, ssc_output_)
@@ -192,14 +189,13 @@ def SSCtrain(
     logger.info("classifier learning rate = %f", classifier_lr_)
     logger.info("classifier training gap = %d", classifier_training_gap_)
     logger.info("classifier test gap = %d", classifier_test_gap_)
-    logger.info("dataloader_num_workers = %d (0=主进程加载，建议 4+)", dataloader_num_workers_)
-    logger.info(
-        "classifier_cache_k = %d (每触发分类器前需 K 遍全训练集 SSC 双视图前向，耗时≈正比于 K)",
-        classifier_cache_k_,
-    )
+    logger.info("dataloader_num_workers = %d", dataloader_num_workers_)
+    logger.info("classifier_cache_k = %d", classifier_cache_k_)
     logger.info("model name = %s", model_name_)
 
-    transformT, transformT1, transformEvalT = get_ssc_transforms_rgb_hsv6(image_size)
+    transformT, transformT1, transformEvalT = get_ssc_transforms(
+        image_size, _IMAGENET_MEAN, _IMAGENET_STD
+    )
 
     def _make_loader(ds, shuffle: bool):
         return DataLoader(
@@ -216,7 +212,7 @@ def SSCtrain(
             input_size=ssc_input_,
             output_size=ssc_output_,
             depth_projector=3,
-            in_channels=6,
+            in_channels=3,
             target_size=image_size,
         )
         model = model.to(device0)
@@ -229,7 +225,7 @@ def SSCtrain(
         time_str = current_time
         best_accuracy = 0.0
         last_accuracy = 0.0
-        logger.info("SSC original mode (DenseNet169-6ch) is ready...")
+        logger.info("SSC original mode (DenseNet169-3ch) is ready...")
     else:
         model = torch.load(model_path + "base-best.pth")
         model = model.to(device0)
@@ -244,7 +240,6 @@ def SSCtrain(
         last_accuracy = 0.0
         logger.info("SSC fine-tuning mode is ready...")
 
-    # 一次性提取 backbone 到内存（冻结层权重在训练中不变，全迭代复用）
     train_feature_dict = build_dense_backbone_cache_in_memory(
         model,
         dataset,
@@ -288,10 +283,9 @@ def SSCtrain(
             for view1, view2, label, name, _ in trainloader:
                 view1 = view1.to(device0)
                 view2 = view2.to(device0)
-                cls_label = (label - 1).to(device0)
                 fx = model(view1)
                 fx1 = model(view2)
-                loss = criterion_align(fx, fx1, labels=cls_label)
+                loss = criterion(fx, fx1)
                 train_loss.append(loss.item())
                 optimizer.zero_grad()
                 loss.backward()
@@ -318,20 +312,14 @@ def SSCtrain(
                 classifier_optimizer = torch.optim.Adam(
                     classifier.parameters(), lr=classifier_lr_, weight_decay=1e-3
                 )
-                classifier_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                    classifier_optimizer,
-                    T_max=classifier_iteration_,
-                    eta_min=classifier_lr_ * 0.01,
-                )
 
                 total_loss = 0.0
                 loss_count = 0
-                style_loss = torch.zeros(1).to(device1)
 
                 K = classifier_cache_k_
                 t_cache0 = time.time()
                 logger.info(
-                    "开始构建 SSC 分类缓存: K=%d 遍 × 全训练集双视图前向（DenseNet169+MLP）…",
+                    "开始构建 SSC 分类缓存: K=%d 遍 × 全训练集双视图前向…",
                     K,
                 )
                 train_ssc_caches = []
@@ -386,8 +374,8 @@ def SSCtrain(
                     time.time() - t_test0,
                 )
 
-                es_patience = 10
-                es_no_improve = 5
+                es_patience = 30
+                es_no_improve = 15
                 es_best_acc = 0.0
 
                 for i in range(classifier_iteration_):
@@ -417,8 +405,6 @@ def SSCtrain(
                             pred = prediction.data.max(1, keepdim=True)[1]
                             total_correct += pred.eq(label.data.view_as(pred)).cpu().sum()
 
-                    classifier_scheduler.step()
-
                     if i % classifier_training_gap_ == classifier_training_gap_ - 1:
                         logger.info(
                             "The classifer-train round is %d, the training accuracy is %d/%d",
@@ -447,7 +433,7 @@ def SSCtrain(
                             accuracy_str = f"{test_accuracy:.4f}".split(".")[1][:4]
                             lt_cls_name = (
                                 model_name_
-                                + "-ADD-DENSE169-"
+                                + "-DENSE169-"
                                 + time_str
                                 + "-iteration-"
                                 + str(iteration)
@@ -457,7 +443,7 @@ def SSCtrain(
                             )
                             lt_base_name = (
                                 model_name_
-                                + "-ADD-DENSE169-"
+                                + "-DENSE169-"
                                 + time_str
                                 + "-iteration-"
                                 + str(iteration)
@@ -506,7 +492,7 @@ def SSCtrain(
                 if epoch == epochs - 1 and iteration == iterations - 1:
                     lt_cls_name = (
                         model_name_
-                        + "-ADD-DENSE169-"
+                        + "-DENSE169-"
                         + time_str
                         + "-iteration-"
                         + str(iteration)
@@ -514,7 +500,7 @@ def SSCtrain(
                     )
                     lt_base_name = (
                         model_name_
-                        + "-ADD-DENSE169-"
+                        + "-DENSE169-"
                         + time_str
                         + "-iteration-"
                         + str(iteration)
@@ -537,7 +523,7 @@ def SSCtrain(
 if __name__ == "__main__":
     model_path = "./model/"
 
-    dataset_name = "Painting91"
+    dataset_name = "Pandora"
     class_num_dict = {
         "Painting91": 13,
         "Pandora": 12,
@@ -554,8 +540,9 @@ if __name__ == "__main__":
     dataSource = os.path.join(data_root, dataset_name) + "/"
     class_number = class_num_dict.get(dataset_name, 10)
     safe_name = dataset_name.replace("/", "_")
-    model_name = f"ssc-add-d169-{safe_name}"
-    logger = logging.getLogger("ssc_add_d169_logger")
+    model_name = f"ssc-d169-{safe_name}"
+
+    logger = logging.getLogger("ssc_densenet169_logger")
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
     formatter = logging.Formatter("%(asctime)s - %(message)s")
@@ -570,7 +557,7 @@ if __name__ == "__main__":
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
 
-    iterations = 5
+    iterations = DEFAULT_SSC_OUTER_ITERATIONS
     training_mode = "original"
     base_model_path = "./model/base-best.pth"
 
