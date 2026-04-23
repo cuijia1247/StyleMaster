@@ -64,14 +64,13 @@ import ssc_train_resnet_copy as ssc_train_resnet
 # ── 固定配置 ─────────────────────────────────────────────────
 # 训练超参一律来自 ssc_train_resnet_copy.parameter_load()，本文件不再覆盖。
 # ITERATIONS：parameter_load 未定义；与 ssc_train_resnet_copy.parse_train_args --iterations 默认一致（1）。
-# WebStyle：数据根为 DATA_ROOT/webstyle（与 traditional / MCCFNet 等一致），非 webstyle/subImages。
 DATASETS = [
     ('Painting91',         13),
     ('Pandora',            12),
     ('AVAstyle',           14),
     ('Arch',               25),
     ('FashionStyle14',     14),
-    ('webstyle',           10),
+    ('webstyle', 10),
 ]
 
 DATA_ROOT        = '/mnt/codes/data/style/'
@@ -169,12 +168,7 @@ def write_batch_result_header():
 
 
 def append_batch_row(dataset_name, run_bests, mean_b, std_b, elapsed_min, start_time, status):
-    # 表中展示名；兼容旧路径名 webstyle/subImages
-    label = (
-        'WebStyle'
-        if dataset_name in ('webstyle', 'webstyle/subImages')
-        else dataset_name
-    )
+    label = dataset_name.replace('webstyle/subImages', 'WebStyle')
     if len(run_bests) == DATASET_REPEAT_RUNS and status == 'OK':
         rpart = " | ".join(f"{x:.4f}" for x in run_bests)
         ms = f"{mean_b:.4f}±{std_b:.4f}"

@@ -191,4 +191,5 @@ runs/
 logs/
 *.log
 
-experiment_result/
+# experiment_result 中本地生成的汇总表；分析类 .py 可提交至仓库
+experiment_result/*.md

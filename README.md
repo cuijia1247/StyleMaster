@@ -1,6 +1,6 @@
 # SSC — Sub-Style Classification
 
-**Author:** cuijia1247 | **Started:** Oct. 2024 | **Current Version:** Apr. 2026
+**Author:** cuijia1247 | **Started:** Oct. 2024 | **Current Version:** Apr. 2026（最后更新 2026-04-23）
 
 > Paper coming soon.
 
@@ -80,6 +80,8 @@ SubStyleClassfication/
 ├── model/                            # 训练保存的模型权重（不提交 git）
 ├── log/                              # 训练日志（不提交 git）
 ├── data/                             # 数据集根目录（不提交 git）
+├── experiment_result/                # 实验汇总表（*.md 多本地、见 .gitignore）与可提交分析脚本
+│   └── Webstyle_analysis.py         # WebStyle：按类统计 train / test 图像数（与 remote_sh 中 DATA_ROOT 解析一致）
 └── requirements.txt
 ```
 
@@ -90,6 +92,7 @@ SubStyleClassfication/
 | 路径 | 说明 |
 |------|------|
 | `GradCAM/` | 本地 Grad-CAM++ 可视化脚本、测试图与输出（与主训练代码解耦，避免污染版本库） |
+| `experiment_result/*.md` | 各实验用 Markdown 汇总表（如 `ours_six_dataset.md`、传统探针结果等，本地生成） |
 | `data/`、`model/`、`pretrainFeatures/` 等 | 数据与权重（见上表及 `.gitignore`） |
 
 ---
@@ -280,6 +283,19 @@ $$\mathcal{L} = \lambda_{\text{align}} \cdot \mathcal{L}_{\text{BT}} + \lambda_{
 ```bash
 python ssc_predict.py
 ```
+
+---
+
+## 实验结果与数据分析
+
+- **`experiment_result/Webstyle_analysis.py`**：在 `train` / `test` 等划分下，按类统计 `webstyle` 数据集中各子类图像数量；默认从 `remote_sh/run_ssc_train_resnet_bat.sh` 内嵌的 `DATA_ROOT` 与批量训练一致，也可用 `--data_root` 显式指定。
+
+```bash
+python experiment_result/Webstyle_analysis.py
+# python experiment_result/Webstyle_analysis.py --data_root /path/to/style/
+```
+
+- 同目录下 `*.md` 多为本地复现或批量评测汇总，默认通过 `.gitignore` 不提交；需要共享时再单独处理。
 
 ---
 
