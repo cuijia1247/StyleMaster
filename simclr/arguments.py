@@ -14,6 +14,11 @@ import warnings
 
 from datetime import datetime
 
+_SIMCLR_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(_SIMCLR_DIR)
+_DEFAULT_CONFIG = os.path.join(_SIMCLR_DIR, "simclr.yaml")
+_DEFAULT_LOG_DIR = os.path.join(_PROJECT_ROOT, "log")
+
 
 class Namespace(object):
     def __init__(self, somedict):
@@ -42,17 +47,17 @@ def set_deterministic(seed):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config-file', type=str, default='/home/cuijia1247/Codes/SubStyleClassfication/simclr/simclr.yaml', help="xxx.yaml")
+    parser.add_argument('-c', '--config-file', type=str, default=_DEFAULT_CONFIG, help="xxx.yaml")
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--debug_subset_size', type=int, default=8)
     parser.add_argument('--download', action='store_true', help="if can't find dataset, download from web")
     parser.add_argument('--data_dir', type=str, default=os.getenv('DATA'))
-    parser.add_argument('--log_dir', type=str, default='/home/cuijia1247/Codes/SubStyleClassfication/log')
+    parser.add_argument('--log_dir', type=str, default=_DEFAULT_LOG_DIR)
     parser.add_argument('--ckpt_dir', type=str, default=os.getenv('CHECKPOINT'))
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--eval_from', type=str, default=None)
     parser.add_argument('--hide_progress', action='store_true')
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
 
     with open(args.config_file, 'r') as f:

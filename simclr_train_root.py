@@ -1,14 +1,23 @@
 # Author: cuijia1247
 # Date: 2025-4-27
 # version: 1.0
+from __future__ import annotations
+
+import argparse
 import logging
+import os
+import sys
 import time
+from dataclasses import dataclass
+from datetime import datetime
+from typing import TypedDict
+
+import numpy as np
 import torch
 from torch import nn
-import torch.optim as optim
 import torchvision.models as models
 from torch.autograd import Variable
-import numpy as np
+from sklearn.metrics import balanced_accuracy_score, f1_score
 # from ssc.Sscreg import SscReg
 from simclr.simclr import SimCLR
 from ssc.utils import criterion, get_byol_transforms, MultiViewDataInjector
@@ -20,8 +29,170 @@ from simclr.arguments import get_args
 #setup device for cuda or cpu
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+MODEL_NAME = "SimCLR (SSC)"
+DEFAULT_DATA_ROOT = "/mnt/codes/data/style/Painting91/"
+DEFAULT_NUM_CLASSES = 13
+DEFAULT_NUM_RUNS = 3
+DEFAULT_RESULT_MD = os.path.join("ieee_access_paperdata", "simclr_multiple.md")
+
+METRIC_LABELS = {
+    "accuracy": "Accuracy",
+    "macro_f1": "Macro-F1",
+    "weighted_f1": "Weighted-F1",
+    "balanced_accuracy": "Balanced Accuracy",
+}
+
+
+class RunMetrics(TypedDict):
+    accuracy: float
+    macro_f1: float
+    weighted_f1: float
+    balanced_accuracy: float
+
+
+@dataclass
+class DatasetResult:
+    name: str
+    num_classes: int
+    data_root: str
+    all_runs: list[RunMetrics]
+
+
+def _compute_metrics(y_true: list[int], y_pred: list[int], num_classes: int) -> RunMetrics:
+    if not y_true:
+        return RunMetrics(
+            accuracy=0.0, macro_f1=0.0, weighted_f1=0.0, balanced_accuracy=0.0
+        )
+    labels_arr = np.asarray(y_true, dtype=np.int64)
+    preds_arr = np.asarray(y_pred, dtype=np.int64)
+    labels_all = list(range(num_classes))
+    return RunMetrics(
+        accuracy=float(np.mean(labels_arr == preds_arr)),
+        macro_f1=float(
+            f1_score(labels_arr, preds_arr, average="macro", labels=labels_all, zero_division=0)
+        ),
+        weighted_f1=float(
+            f1_score(labels_arr, preds_arr, average="weighted", labels=labels_all, zero_division=0)
+        ),
+        balanced_accuracy=float(balanced_accuracy_score(labels_arr, preds_arr)),
+    )
+
+
+def _format_mean_std(values: list[float]) -> str:
+    valid = [v for v in values if not np.isnan(v)]
+    if not valid:
+        return "FAILED" if values else "-"
+    arr = np.asarray(valid, dtype=np.float64)
+    mean_v = float(np.mean(arr))
+    std_v = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
+    return f"{mean_v:.4f}±{std_v:.4f}"
+
+
+def _run_cell_value(all_runs: list[RunMetrics], run_idx: int, metric_key: str) -> str:
+    """run_idx 为 0-based；尚未完成的轮次显示 '-'。"""
+    if run_idx >= len(all_runs):
+        return "-"
+    v = all_runs[run_idx][metric_key]
+    if np.isnan(v):
+        return "FAILED"
+    return f"{v:.4f}"
+
+
+def _format_metric_table_block(
+    metric_title: str, results: list[DatasetResult], metric_key: str, runs: int
+) -> list[str]:
+    run_headers = [f"run{i}" for i in range(1, runs + 1)]
+    lines = [
+        f"### {metric_title}",
+        "",
+        "| Dataset | num_classes | "
+        + " | ".join(run_headers)
+        + " | mean±std | data_root |",
+        "|" + "|".join(["---------"] * (4 + runs)) + "|",
+    ]
+    for result in results:
+        values = [m[metric_key] for m in result.all_runs]
+        run_cells = [_run_cell_value(result.all_runs, i, metric_key) for i in range(runs)]
+        lines.append(
+            f"| {result.name} | {result.num_classes} | "
+            + " | ".join(run_cells)
+            + f" | {_format_mean_std(values)} | `{result.data_root}` |"
+        )
+    lines.append("")
+    return lines
+
+
+def _format_summary_table(results: list[DatasetResult]) -> list[str]:
+    metric_titles = list(METRIC_LABELS.values())
+    lines = [
+        "## 汇总总表",
+        "",
+        "| Dataset | num_classes | "
+        + " | ".join(metric_titles)
+        + " |",
+        "|---------|-------------|"
+        + "|".join(["---------"] * len(metric_titles))
+        + "|",
+    ]
+    for result in results:
+        cells = [_format_mean_std([m[k] for m in result.all_runs]) for k in METRIC_LABELS]
+        lines.append(
+            f"| {result.name} | {result.num_classes} | " + " | ".join(cells) + " |"
+        )
+    lines.append("")
+    return lines
+
+
+def write_result_markdown(
+    result_path: str,
+    results: list[DatasetResult],
+    data_base: str,
+    pretrain_epochs: int,
+    runs: int,
+    completed_runs: int | None = None,
+) -> None:
+    os.makedirs(os.path.dirname(os.path.abspath(result_path)), exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    argv_summary = " ".join([sys.argv[0]] + sys.argv[1:])
+    dataset_names = ", ".join(r.name for r in results)
+    done = completed_runs if completed_runs is not None else max(
+        (len(r.all_runs) for r in results), default=0
+    )
+    progress = f", completed={done}/{runs}" if done < runs else ""
+    lines = [
+        f"# {MODEL_NAME} 多数据集多次实验",
+        "",
+        f"## {MODEL_NAME} benchmark ({dataset_names}) "
+        f"(epochs={pretrain_epochs}, runs={runs}{progress}) — {timestamp}",
+        "",
+        f"_data_base=`{data_base}`_",
+        "",
+        f"_命令: `{argv_summary}`_",
+        "",
+    ]
+    for metric_key, metric_title in METRIC_LABELS.items():
+        lines.extend(_format_metric_table_block(metric_title, results, metric_key, runs))
+    lines.extend(_format_summary_table(results))
+    with open(result_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+
+def _make_logger(log_path: str) -> logging.Logger:
+    logger = logging.getLogger(log_path)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    logger.handlers.clear()
+    fmt = logging.Formatter("%(asctime)s - %(message)s")
+    sh = logging.StreamHandler()
+    sh.setFormatter(fmt)
+    logger.addHandler(sh)
+    fh = logging.FileHandler(log_path)
+    fh.setFormatter(fmt)
+    logger.addHandler(fh)
+    return logger
+
 def parameter_load():
-    epochs = 300 #best, perhaps6001
+    epochs = 126 #best, perhaps300
     # backbone = 'resnet50'
     # ssc_backend = 'resnet50'
     ssc_input = 2048
@@ -31,9 +202,9 @@ def parameter_load():
     # offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 150 #best
+    classfier_iteration = 300 #best 150
     # classfier_iteration = 300  # best
-    classifier_lr = 0.0005 #best
+    classifier_lr = 0.001 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
     classifier_training_gap = 25
     model_name = ''
@@ -76,15 +247,19 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
     #normalize and randomcrop input images
     transformT, transformT1, transformEvalT = get_byol_transforms(image_size, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 
-    #setup dataset & dataloader
-    dataSource = dataset
+    # SscDataset 用字符串拼接路径，dataSource 必须以 '/' 结尾
+    dataSource = dataset if dataset.endswith(os.sep) else dataset + os.sep
     trainData = 'train'
     trainset = SscDataset(dataSource, trainData, transform=MultiViewDataInjector([transformT, transformT1]))
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=False)
     testData = 'test'
     testset = SscDataset(dataSource, testData, transform=MultiViewDataInjector([transformT, transformT1]))
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
-    logger.info('simclr ' + dataSource + ' is ready...')
+    if len(trainset) == 0 or len(testset) == 0:
+        raise ValueError(
+            f"数据集为空: train={len(trainset)}, test={len(testset)}, dataSource={dataSource}"
+        )
+    logger.info('simclr %s is ready (train=%d, test=%d)...', dataSource, len(trainset), len(testset))
 
     # lr = base_lr*batch_size/offset_bs
     #set up the simclr model
@@ -121,6 +296,9 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
     time_str = current_time
     best_accuracy = 0.0
     last_accuracy = 0.0
+    best_metrics = RunMetrics(
+        accuracy=0.0, macro_f1=0.0, weighted_f1=0.0, balanced_accuracy=0.0
+    )
     for epoch in range(epochs):
         # print('epoch is {}'.format(epoch))
         model.train()
@@ -199,8 +377,10 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                     logger.info('The classifer-train round is %d, the training accuracy is %d/%d', i, total_correct,
                                 len(trainset))
                     # print('The cla-train round is {}, the training ratio is {}/{}'.format(i, total_correct, len(trainset)))
-                if i % 50 == 19:
+                if i % 20 == 19:
                     test_correct = 0.0
+                    y_true: list[int] = []
+                    y_pred: list[int] = []
                     classifier.eval()
                     for view1, view2, label, name, original in tk2:
                         correct_ = 0.0
@@ -214,32 +394,21 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                         test1 = backbone_view - data_dict['z1']  # only use view 1
                         test2 = backbone_view - data_dict['z2']
                         ###########################
-                        # test1 = data_dict['z1']  # only use view 1
-                        # test2 = data_dict['z2']
                         test = test1 + test2
                         prediction = classifier(test)
-                        # val, idx = prediction.topk(1)
-                        # idx = idx.t().squeeze()
-                        # idx = idx.cpu().float()
-                        # original_label = label
-                        # label = label.cpu().float()-1
                         label = label - 1
                         label = Variable(label).cuda()
-                        # style_loss = classifier_criterion(prediction, label)
-                        # classifier_optimizer.zero_grad()
-                        # style_loss.requires_grad_()
-                        # style_loss.backward()
-                        # classifier_optimizer.step()
                         pred = prediction.data.max(1, keepdim=True)[1]
+                        y_true.extend(label.cpu().tolist())
+                        y_pred.extend(pred.squeeze(1).cpu().tolist())
                         correct_ += pred.eq(label.data.view_as(pred)).cpu().sum()
-                        # correct = idx.eq(label).cpu().sum()
                         test_correct += correct_
 
-                    # print('TEST RESULTS: The test round is {}, the test ratio is {}/{}, the test accuracy is {}'.format(i,
-                    #             test_correct, len(testset), float(test_correct/len(testset))))
-                    test_accuracy = float(test_correct / len(testset))
+                    test_accuracy = float(test_correct / max(len(testset), 1))
                     last_accuracy = test_accuracy
                     if test_accuracy > best_accuracy:  # the current best classifier
+                        best_accuracy = test_accuracy
+                        best_metrics = _compute_metrics(y_true, y_pred, class_number)
                         lt_classifier_name = model_name_ + '-SSC-resnet50-' + time_str + '-simclr-classifier-best.pth'
                         lt_base_name = model_name_ + '-SSC-resnet50-' + time_str + '-simclr-base-best.pth'
                         torch.save(model, model_path + lt_base_name)
@@ -247,7 +416,12 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                         logger.info(
                             '+++THE BEST MODEL is saved+++. The best accuracy is %f, and the current accuracy is %f',
                             best_accuracy, test_accuracy)
-                        best_accuracy = test_accuracy
+                        logger.info(
+                            'Best metrics: macro_f1=%.4f weighted_f1=%.4f balanced_acc=%.4f',
+                            best_metrics["macro_f1"],
+                            best_metrics["weighted_f1"],
+                            best_metrics["balanced_accuracy"],
+                        )
                     logger.info(
                         'Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i,
                         test_correct,
@@ -261,35 +435,121 @@ def simclr_train(logger, model_path, current_time, opt_model_name, dataset, clas
                 torch.save(classifier, model_path + lt_classifier_name)
                 logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
     logger.info('The best accuracy is %f, and the last accuracy is %f', best_accuracy, last_accuracy)
-    logging.shutdown()
+    logger.info(
+        'Done. acc=%.4f macro_f1=%.4f weighted_f1=%.4f balanced_acc=%.4f',
+        best_metrics["accuracy"],
+        best_metrics["macro_f1"],
+        best_metrics["weighted_f1"],
+        best_metrics["balanced_accuracy"],
+    )
+    return best_metrics
 
 
-if __name__ == '__main__':
-    model_path = './model/'
-    # dataSource = './data/Painting91/' #painting 91 dataset, classes = 13
-    # dataSource = './data/Pandora/'  # pandora dataset, classes = 12
-    # dataSource = './data/WikiArt3/'  # WikiArt3 dataset, classes = 15
-    # dataSource = './data/Arch/'  # Arch dataset, classes = 25
-    # dataSource = './data/FashionStyle14/'  # FashionStyle14 dataset, classes = 14
-    # dataSource = './data/artbench/' #artbench dataset, classes = 10
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/Painting91/'  # the '/' is necessary
-    class_number = 13
-    model_name = 'simclr_painting91'
-    logger = logging.getLogger("my_logger")
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    # formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    formatter = logging.Formatter("%(asctime)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    current_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())
-    log_name = model_name + '-' + current_time + '.log'
-    filehandler = logging.FileHandler("./log/" + log_name)
-    filehandler.setFormatter(formatter)
-    logger.addHandler(filehandler)
-    simclr_train(logger, model_path, current_time, model_name, dataSource, class_number)
-    logger.removeHandler(filehandler)
-    logger.removeHandler(handler)
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description=f"{MODEL_NAME} 本地训练，多轮实验 + Markdown 输出")
+    p.add_argument("--data_root", type=str, default=DEFAULT_DATA_ROOT)
+    p.add_argument("--num_classes", type=int, default=DEFAULT_NUM_CLASSES)
+    p.add_argument("--runs", type=int, default=DEFAULT_NUM_RUNS, help="重复训练次数（默认 5）")
+    p.add_argument("--result_md", type=str, default=DEFAULT_RESULT_MD)
+    p.add_argument("--model_path", type=str, default="./model/")
+    return p.parse_args()
+
+
+def _save_run_markdown(
+    result_md: str,
+    dataset_name: str,
+    num_classes: int,
+    data_root: str,
+    all_runs: list[RunMetrics],
+    pretrain_epochs: int,
+    total_runs: int,
+) -> None:
+    """将当前已完成 run 的结果写入指定 md（每轮 run 结束后调用）。"""
+    data_base = os.path.dirname(data_root.rstrip("/")) + os.sep
+    results = [
+        DatasetResult(
+            name=dataset_name,
+            num_classes=num_classes,
+            data_root=data_root.rstrip("/"),
+            all_runs=all_runs,
+        )
+    ]
+    write_result_markdown(
+        result_md,
+        results,
+        data_base,
+        pretrain_epochs,
+        total_runs,
+        completed_runs=len(all_runs),
+    )
+
+
+def main():
+    """本地 SSC 版 SimCLR：多轮训练，四项指标写入 ieee_access_paperdata/。"""
+    args = parse_args()
+    if args.runs < 1:
+        raise SystemExit("错误: --runs 须 >= 1")
+
+    data_root = os.path.abspath(args.data_root.rstrip(os.sep))
+    if not data_root.endswith(os.sep):
+        data_root += os.sep
+    dataset_name = os.path.basename(os.path.normpath(data_root))
+    model_name = f"simclr_{dataset_name.lower()}"
+    pretrain_epochs = parameter_load()[0]
+
+    os.makedirs(args.model_path, exist_ok=True)
+    os.makedirs("./log", exist_ok=True)
+    os.makedirs(os.path.dirname(os.path.abspath(args.result_md)), exist_ok=True)
+
+    all_runs: list[RunMetrics] = []
+    for r in range(1, args.runs + 1):
+        current_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+        log_path = os.path.join("./log", f"{model_name}-run{r}-{current_time}.log")
+        logger = _make_logger(log_path)
+        print(f"[{dataset_name} run{r}/{args.runs}] 开始训练…")
+        try:
+            metrics = simclr_train(
+                logger, args.model_path, current_time, model_name, data_root, args.num_classes
+            )
+            all_runs.append(metrics)
+            print(
+                f"[{dataset_name} run{r}/{args.runs}] "
+                f"acc={metrics['accuracy']:.4f}, macro_f1={metrics['macro_f1']:.4f}, "
+                f"weighted_f1={metrics['weighted_f1']:.4f}, "
+                f"balanced_acc={metrics['balanced_accuracy']:.4f}"
+            )
+        except Exception as e:
+            logger.exception("Run %d failed", r)
+            all_runs.append(
+                RunMetrics(
+                    accuracy=float("nan"),
+                    macro_f1=float("nan"),
+                    weighted_f1=float("nan"),
+                    balanced_accuracy=float("nan"),
+                )
+            )
+            print(f"[{dataset_name} run{r}/{args.runs}] FAILED: {e}")
+
+        # 每轮 run 结束后立即更新 md（未完成轮次显示为 '-'）
+        _save_run_markdown(
+            args.result_md,
+            dataset_name,
+            args.num_classes,
+            data_root,
+            all_runs,
+            pretrain_epochs,
+            args.runs,
+        )
+        print(f"结果已更新: {args.result_md} ({len(all_runs)}/{args.runs} runs)")
+
+    print(
+        f"[{dataset_name}] Accuracy "
+        f"{_format_mean_std([m['accuracy'] for m in all_runs])}"
+    )
+
+
+if __name__ == "__main__":
+    main()
 
 
 
