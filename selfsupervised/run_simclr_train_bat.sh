@@ -24,12 +24,13 @@ RESULT_MD="$ROOT/ieee_access_paperdata/simclr_multiple.md"
 DATA_BASE="/mnt/codes/data/style"
 RUNS=3
 
-# label|num_classes|相对 data_base 的子目录
+# label|num_classes|相对 data_base 的子目录（Artbench 目录名首字母大写、bench 小写）
 DATASETS=(
-  "Pandora|12|Pandora"
-  "ArtBench|10|artbench-10-imagefolder-split"
-  "FashionStyle14|14|FashionStyle14"
-  "Arch|25|Arch"
+  # "Painting91|13|Painting91"
+  # "Pandora|12|Pandora"
+  "ArtBench|10|Artbench"
+  # "FashionStyle14|14|FashionStyle14"
+  # "Arch|25|Arch"
 )
 
 TIMESTAMP="${SIMCLR_BAT_TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
@@ -71,6 +72,14 @@ if not data_base.endswith("/"):
     data_base += "/"
 
 dataset_order = ["Painting91", "Pandora", "ArtBench", "FashionStyle14", "Arch"]
+# 合并表中的 Dataset 名 → 磁盘子目录（ArtBench 对应 Artbench）
+dataset_rel = {
+    "Painting91": "Painting91",
+    "Pandora": "Pandora",
+    "ArtBench": "Artbench",
+    "FashionStyle14": "FashionStyle14",
+    "Arch": "Arch",
+}
 metric_sections = [
     ("Accuracy", "accuracy"),
     ("Macro-F1", "macro_f1"),
@@ -132,7 +141,7 @@ for section, _ in metric_sections:
         else:
             failed = " | ".join(["FAILED"] * runs)
             lines.append(
-                f"| {ds} | ? | {failed} | FAILED | `{data_base}` |"
+                f"| {ds} | ? | {failed} | FAILED | `{data_base}{dataset_rel.get(ds, ds)}` |"
             )
     lines.append("")
 

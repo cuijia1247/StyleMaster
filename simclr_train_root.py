@@ -30,10 +30,10 @@ from simclr.arguments import get_args
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 MODEL_NAME = "SimCLR (SSC)"
-DEFAULT_DATA_ROOT = "/mnt/codes/data/style/Painting91/"
-DEFAULT_NUM_CLASSES = 13
+DEFAULT_DATA_ROOT = "/mnt/codes/data/style/Artbench/"
+DEFAULT_NUM_CLASSES = 10
 DEFAULT_NUM_RUNS = 3
-DEFAULT_RESULT_MD = os.path.join("ieee_access_paperdata", "simclr_multiple.md")
+DEFAULT_RESULT_MD = os.path.join("ieee_access_paperdata", "simclr_multiple_artbench.md")
 
 METRIC_LABELS = {
     "accuracy": "Accuracy",
@@ -192,7 +192,7 @@ def _make_logger(log_path: str) -> logging.Logger:
     return logger
 
 def parameter_load():
-    epochs = 126 #best, perhaps300
+    epochs = 301 #best, perhaps300
     # backbone = 'resnet50'
     # ssc_backend = 'resnet50'
     ssc_input = 2048
@@ -202,11 +202,11 @@ def parameter_load():
     # offset_bs = 512
     base_lr = 0.008 #best
     image_size = 64 #best
-    classfier_iteration = 300 #best 150
+    classfier_iteration = 101 #best 150
     # classfier_iteration = 300  # best
-    classifier_lr = 0.001 #best
+    classifier_lr = 0.0008 #best
     # classifier_structure = '2048-1024-512-13 with dropout'
-    classifier_training_gap = 25
+    classifier_training_gap = 50
     model_name = ''
     return (epochs, batch_size_, base_lr, image_size, classfier_iteration, classifier_lr, model_name,
             classifier_training_gap, ssc_input, ssc_output)#, classifier_structure

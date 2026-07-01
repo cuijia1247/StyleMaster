@@ -10,8 +10,9 @@ ROOT="$(cd "$SELF_DIR/.." && pwd)"
 cd "$ROOT"
 
 PID_FILE="$SELF_DIR/mccfnet_train_bat.pid"
+LASTLOG_FILE="$SELF_DIR/mccfnet_bat.lastlog"
 LOG_DIR="$SELF_DIR/logs"
-RESULT_FILE="$SELF_DIR/mccfnet_result.md"
+RESULT_FILE="$ROOT/ieee_access_paperdata/MCCFNet_multiple.md"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -20,7 +21,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 show_help() {
-  echo "MCCFNet 六数据集批量训练（DenseNet169+RWP，epochs=20，结果见 mccfnet_result.md）"
+  echo "MCCFNet 五数据集批量训练（DenseNet169+RWP，runs=3，四项指标，结果见 ieee_access_paperdata/MCCFNet_multiple.md）"
   echo ""
   echo "用法: $0 {start|stop|restart|status|tail|logs|result|help}"
   echo ""
@@ -30,7 +31,7 @@ show_help() {
   echo "  status  - 进程与 GPU、最新日志摘要"
   echo "  tail    - tail -f 最新 mccfnet_bat 日志"
   echo "  logs    - 列出 MCCFNet/logs 下 mccfnet_bat 日志"
-  echo "  result  - 打印 mccfnet_result.md"
+  echo "  result  - 打印 ieee_access_paperdata/MCCFNet_multiple.md"
   echo ""
 }
 
@@ -93,10 +94,15 @@ check_status() {
     echo ""
     nvidia-smi 2>/dev/null || echo "nvidia-smi 不可用"
     echo ""
-    LATEST="$(ls -t "$LOG_DIR"/mccfnet_bat_*.log 2>/dev/null | head -1 || true)"
-    if [[ -n "${LATEST:-}" ]]; then
-      echo -e "${CYAN}最新日志: $LATEST ($(du -h "$LATEST" | cut -f1))${NC}"
-      tail -8 "$LATEST"
+    if [[ -f "$LASTLOG_FILE" ]]; then
+      echo -e "${CYAN}当前日志: $(cat "$LASTLOG_FILE")${NC}"
+      tail -8 "$(cat "$LASTLOG_FILE")" 2>/dev/null || true
+    else
+      LATEST="$(ls -t "$LOG_DIR"/mccfnet_bat_*.log 2>/dev/null | head -1 || true)"
+      if [[ -n "${LATEST:-}" ]]; then
+        echo -e "${CYAN}最新日志: $LATEST ($(du -h "$LATEST" | cut -f1))${NC}"
+        tail -8 "$LATEST"
+      fi
     fi
   else
     echo -e "${RED}PID 文件存在但进程已退出${NC}"
@@ -106,7 +112,11 @@ check_status() {
 }
 
 tail_log() {
-  LATEST="$(ls -t "$LOG_DIR"/mccfnet_bat_*.log 2>/dev/null | head -1 || true)"
+  if [[ -f "$LASTLOG_FILE" ]]; then
+    LATEST="$(cat "$LASTLOG_FILE")"
+  else
+    LATEST="$(ls -t "$LOG_DIR"/mccfnet_bat_*.log 2>/dev/null | head -1 || true)"
+  fi
   if [[ -z "${LATEST:-}" ]]; then
     echo -e "${RED}未找到 $LOG_DIR/mccfnet_bat_*.log${NC}"
     return 1
