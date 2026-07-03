@@ -1,0 +1,17 @@
+# 本地预训练权重（vgg_normalised.pth 等），不上传 GitHub
+models/
+# AdaIN 训练输出（decoder 权重、可视化等），不上传 GitHub
+experiments/
+
+data/
+wandb/
+kaokore-kmeans/
+pacs_styles/
+checkpoints/
+__pycache__/
+pacs-ohem*/
+pytorch-AdaIN/models
+pytorch-AdaIN/experiments
+pytorch-AdaIN/logs
+pytorch-AdaIN/data
+

@@ -4,6 +4,8 @@ data/
 # Pretrained features and models (large files)
 pretrainFeatures/
 pretrainModels/
+ST-SACLF-ncc_main/models/
+ST-SACLF-ncc_main/experiments/
 
 # Model checkpoints
 model/
@@ -36,6 +38,17 @@ selfsupervised/barlowtwins_bat.pid
 # MCCFNet 批量：日志与 PID（本地）
 MCCFNet/logs/
 MCCFNet/mccfnet_train_bat.pid
+
+# CLIP-based OpenCLIP 批量：日志与 PID（本地）
+CLIP-based/logs/
+CLIP-based/openclip_bat.pid
+CLIP-based/openclip_bat.lastlog
+
+# ST-SACLF AdaIN 批量：日志与 PID（本地）
+ST-SACLF-ncc_main/pytorch-AdaIN/logs/
+ST-SACLF-ncc_main/pytorch-AdaIN/st_saclf_bat.pid
+ST-SACLF-ncc_main/pytorch-AdaIN/st_saclf_bat.lastlog
+ST-SACLF-ncc_main/pytorch-AdaIN/st_saclf_bat.partialdir
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,30 +1,32 @@
 #!/usr/bin/env bash
 #
-# SimCLR (simclr_train_root.py) 五数据集批量训练
+# ST-SACLF AdaIN (train.py) 五数据集批量训练
 # 数据集: Painting91, Pandora, ArtBench, FashionStyle14, Arch
-# 默认参数沿用 simclr_train_root.py / parameter_load()，每库 runs=3
-# 结果合并写入 ieee_access_paperdata/simclr_multiple.md（格式对齐 vgg16_multiple.md）
+# 默认参数沿用 train.py，每库 runs=3，四项指标
+# 结果合并写入 ieee_access_paperdata/ST-SACLF_multiple.md（格式对齐 BarlowTwins_multiple.md）
 #
 # 用法（均在项目根目录执行）::
-#   ./selfsupervised/run_simclr_train_bat.sh              # 后台 + nohup
-#   ./selfsupervised/run_simclr_train_bat.sh fg           # 前台（调试）
+#   ./ST-SACLF-ncc_main/pytorch-AdaIN/run_st_saclf_train_bat.sh              # 后台 + nohup
+#   ./ST-SACLF-ncc_main/pytorch-AdaIN/run_st_saclf_train_bat.sh fg           # 前台（调试）
 #
-# 管理: ./selfsupervised/manage_simclr_train_bat.sh {start|stop|status|tail|result|…}
+# 管理: ./ST-SACLF-ncc_main/pytorch-AdaIN/manage_st_saclf_train_bat.sh {start|stop|status|tail|partial|result|…}
 
 set -euo pipefail
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$SELF_DIR/.." && pwd)"
+ROOT="$(cd "$SELF_DIR/../.." && pwd)"
 cd "$ROOT"
 
-PID_FILE="$SELF_DIR/simclr_bat.pid"
-LASTLOG_FILE="$SELF_DIR/simclr_bat.lastlog"
+PID_FILE="$SELF_DIR/st_saclf_bat.pid"
+LASTLOG_FILE="$SELF_DIR/st_saclf_bat.lastlog"
+PARTIAL_INFO_FILE="$SELF_DIR/st_saclf_bat.partialdir"
 LOG_DIR="$SELF_DIR/logs"
-RESULT_MD="$ROOT/ieee_access_paperdata/simclr_multiple.md"
+RESULT_MD="$ROOT/ieee_access_paperdata/ST-SACLF_multiple.md"
 DATA_BASE="/mnt/codes/data/style"
 RUNS=3
+MAX_ITER=10000
 
-# label|num_classes|相对 data_base 的子目录（Artbench 目录名首字母大写、bench 小写）
+# label|num_classes|相对 data_base 的子目录（ArtBench 对应 Artbench）
 DATASETS=(
   "Painting91|13|Painting91"
   "Pandora|12|Pandora"
@@ -33,14 +35,12 @@ DATASETS=(
   "Arch|25|Arch"
 )
 
-TIMESTAMP="${SIMCLR_BAT_TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
-LOG_FILE="${SIMCLR_BAT_LOG:-$LOG_DIR/simclr_bat_${TIMESTAMP}.log}"
-PARTIAL_DIR="${SIMCLR_BAT_PARTIAL:-$LOG_DIR/simclr_partials_${TIMESTAMP}}"
+TIMESTAMP="${ST_SACLF_BAT_TIMESTAMP:-$(date +%Y%m%d_%H%M%S)}"
+LOG_FILE="${ST_SACLF_BAT_LOG:-$LOG_DIR/st_saclf_bat_${TIMESTAMP}.log}"
+PARTIAL_DIR="${ST_SACLF_BAT_PARTIAL:-$LOG_DIR/st_saclf_partials_${TIMESTAMP}}"
 
 mkdir -p "$LOG_DIR" "$PARTIAL_DIR"
-mkdir -p "$ROOT/model" "$ROOT/log" "$ROOT/pretrainModels" "$ROOT/ieee_access_paperdata"
-
-export TORCH_HOME="${TORCH_HOME:-$ROOT/pretrainModels}"
+mkdir -p "$ROOT/ieee_access_paperdata"
 
 if command -v conda &>/dev/null; then
   # shellcheck source=/dev/null
@@ -58,7 +58,7 @@ fi
 
 merge_partial_markdown() {
   PARTIAL_DIR="$PARTIAL_DIR" RESULT_MD="$RESULT_MD" RUNS="$RUNS" DATA_BASE="$DATA_BASE" \
-  LOG_FILE="$LOG_FILE" ROOT="$ROOT" "$PYTHON_BIN" - <<'PY'
+  "$PYTHON_BIN" - <<'PY'
 import glob
 import os
 import re
@@ -72,7 +72,6 @@ if not data_base.endswith("/"):
     data_base += "/"
 
 dataset_order = ["Painting91", "Pandora", "ArtBench", "FashionStyle14", "Arch"]
-# 合并表中的 Dataset 名 → 磁盘子目录（ArtBench 对应 Artbench）
 dataset_rel = {
     "Painting91": "Painting91",
     "Pandora": "Pandora",
@@ -81,10 +80,10 @@ dataset_rel = {
     "Arch": "Arch",
 }
 metric_sections = [
-    ("Accuracy", "accuracy"),
-    ("Macro-F1", "macro_f1"),
-    ("Weighted-F1", "weighted_f1"),
-    ("Balanced Accuracy", "balanced_accuracy"),
+    "Accuracy",
+    "Macro-F1",
+    "Weighted-F1",
+    "Balanced Accuracy",
 ]
 
 partials = {}
@@ -93,10 +92,11 @@ for path in sorted(glob.glob(os.path.join(partial_dir, "*.md"))):
     with open(path, encoding="utf-8") as f:
         partials[name] = f.read()
 
-epochs = "?"
-m = re.search(r"\(epochs=(\d+),\s*runs=\d+\)", next(iter(partials.values()), ""))
-if m:
-    epochs = m.group(1)
+max_iter = clf_epochs = "?"
+if partials:
+    m = re.search(r"max_iter=(\d+),\s*clf_epochs=(\d+)", next(iter(partials.values())))
+    if m:
+        max_iter, clf_epochs = m.group(1), m.group(2)
 
 def extract_table_row(text: str, section: str) -> str:
     pat = rf"### {re.escape(section)}\s*\n\n(\|.+\|\n\|[-| ]+\|\n)(\|.+\|)"
@@ -114,18 +114,20 @@ def extract_summary_row(text: str) -> str:
 
 run_headers = [f"run{i}" for i in range(1, runs + 1)]
 lines = [
-    "# SimCLR (SSC) 多数据集多次实验",
+    "# ST-SACLF (AdaIN) 多数据集多次实验",
     "",
-    f"## SimCLR (SSC) benchmark ({', '.join(dataset_order)}) "
-    f"(epochs={epochs}, runs={runs}) — {datetime.now():%Y-%m-%d %H:%M:%S}",
+    f"## ST-SACLF (AdaIN) benchmark ({', '.join(dataset_order)}) "
+    f"(max_iter={max_iter}, clf_epochs={clf_epochs}, runs={runs}) — "
+    f"{datetime.now():%Y-%m-%d %H:%M:%S}",
     "",
     f"_data_base=`{data_base}`_",
     "",
-    f"_命令: `./selfsupervised/run_simclr_train_bat.sh` → `simclr_train_root.py` × {len(dataset_order)} 数据集_",
+    f"_命令: `./ST-SACLF-ncc_main/pytorch-AdaIN/run_st_saclf_train_bat.sh` → "
+    f"`train.py` × {len(dataset_order)} 数据集_",
     "",
 ]
 
-for section, _ in metric_sections:
+for section in metric_sections:
     lines += [
         f"### {section}",
         "",
@@ -168,11 +170,11 @@ PY
 
 run_batch() {
   echo "ROOT=$ROOT"
-  echo "训练脚本: $ROOT/simclr_train_root.py"
+  echo "训练脚本: $SELF_DIR/train.py"
   echo "日志: $LOG_FILE"
   echo "部分结果: $PARTIAL_DIR"
   echo "最终结果: $RESULT_MD"
-  echo "runs=$RUNS, 数据集数=${#DATASETS[@]}"
+  echo "runs=$RUNS, max_iter=$MAX_ITER, 数据集数=${#DATASETS[@]}"
   echo "GPU 检查:"
   "$PYTHON_BIN" -c "import torch; print('  CUDA:', torch.cuda.is_available(), 'count:', torch.cuda.device_count())" 2>/dev/null || true
   echo ""
@@ -188,20 +190,25 @@ run_batch() {
     echo "  data_root=$data_root"
     echo "  partial_md=$partial_md"
 
-    "$PYTHON_BIN" "$ROOT/simclr_train_root.py" \
+    "$PYTHON_BIN" "$SELF_DIR/train.py" \
       --data_root "$data_root" \
       --num_classes "$n_cls" \
       --runs "$RUNS" \
-      --result_md "$partial_md"
+      --max_iter "$MAX_ITER" \
+      --result_md "$partial_md" \
+      --merge_result_md "$RESULT_MD" \
+      --partial_dir "$PARTIAL_DIR" \
+      --dataset_label "$label"
   done
 
   echo ""
-  echo "========== 合并 Markdown =========="
+  echo "========== 最终合并 Markdown =========="
   merge_partial_markdown
 }
 
 run_foreground() {
   echo "$LOG_FILE" >"$LASTLOG_FILE"
+  echo "$PARTIAL_DIR" >"$PARTIAL_INFO_FILE"
   echo "前台运行（输出同时写入日志）..."
   run_batch 2>&1 | tee -a "$LOG_FILE"
 }
@@ -210,29 +217,49 @@ run_background() {
   if [[ -f "$PID_FILE" ]]; then
     OLD_PID="$(cat "$PID_FILE")"
     if ps -p "$OLD_PID" > /dev/null 2>&1; then
-      echo "已有 SimCLR 批量任务在运行 (PID=$OLD_PID)。请先: ./selfsupervised/manage_simclr_train_bat.sh stop"
+      echo "已有 ST-SACLF 批量任务在运行 (PID=$OLD_PID)。"
       exit 1
     fi
     rm -f "$PID_FILE"
   fi
 
   echo "$LOG_FILE" >"$LASTLOG_FILE"
+  echo "$PARTIAL_DIR" >"$PARTIAL_INFO_FILE"
   echo "后台运行: nohup → $LOG_FILE"
   nohup env \
-    SIMCLR_BAT_LOG="$LOG_FILE" \
-    SIMCLR_BAT_PARTIAL="$PARTIAL_DIR" \
-    SIMCLR_BAT_TIMESTAMP="$TIMESTAMP" \
-    "$SELF_DIR/run_simclr_train_bat.sh" _batch >>"$LOG_FILE" 2>&1 &
+    ST_SACLF_BAT_LOG="$LOG_FILE" \
+    ST_SACLF_BAT_PARTIAL="$PARTIAL_DIR" \
+    ST_SACLF_BAT_TIMESTAMP="$TIMESTAMP" \
+    "$SELF_DIR/run_st_saclf_train_bat.sh" _batch >>"$LOG_FILE" 2>&1 &
   echo $! >"$PID_FILE"
   echo "PID=$(cat "$PID_FILE") 已写入 $PID_FILE"
-  echo "查看日志: ./selfsupervised/manage_simclr_train_bat.sh tail"
+  echo "查看日志: ./ST-SACLF-ncc_main/pytorch-AdaIN/manage_st_saclf_train_bat.sh tail"
+  echo "中间结果: ./ST-SACLF-ncc_main/pytorch-AdaIN/manage_st_saclf_train_bat.sh partial"
+}
+
+run_merge_only() {
+  if [[ -n "${ST_SACLF_BAT_PARTIAL:-}" ]]; then
+    PARTIAL_DIR="$ST_SACLF_BAT_PARTIAL"
+  elif [[ -f "$PARTIAL_INFO_FILE" ]]; then
+    PARTIAL_DIR="$(cat "$PARTIAL_INFO_FILE")"
+  else
+    PARTIAL_DIR="$(ls -td "$LOG_DIR"/st_saclf_partials_* 2>/dev/null | head -1 || true)"
+  fi
+  if [[ -z "${PARTIAL_DIR:-}" || ! -d "$PARTIAL_DIR" ]]; then
+    echo "错误: 未找到 partial 目录"
+    exit 1
+  fi
+  echo "合并 partial: $PARTIAL_DIR → $RESULT_MD"
+  merge_partial_markdown
 }
 
 case "${1:-}" in
   fg|foreground|front) run_foreground ;;
+  merge) run_merge_only ;;
   _batch)
-    LOG_FILE="${SIMCLR_BAT_LOG:-$LOG_FILE}"
-    PARTIAL_DIR="${SIMCLR_BAT_PARTIAL:-$PARTIAL_DIR}"
+    LOG_FILE="${ST_SACLF_BAT_LOG:-$LOG_FILE}"
+    PARTIAL_DIR="${ST_SACLF_BAT_PARTIAL:-$PARTIAL_DIR}"
+    echo "$PARTIAL_DIR" >"$PARTIAL_INFO_FILE"
     run_batch
     ;;
   *) run_background ;;
