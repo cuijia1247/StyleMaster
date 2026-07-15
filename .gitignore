@@ -50,6 +50,14 @@ ST-SACLF-ncc_main/pytorch-AdaIN/st_saclf_bat.pid
 ST-SACLF-ncc_main/pytorch-AdaIN/st_saclf_bat.lastlog
 ST-SACLF-ncc_main/pytorch-AdaIN/st_saclf_bat.partialdir
 
+# ieee_access_codes SSC-ResNet50 批量：日志与 PID（本地）
+ieee_access_codes/logs/
+ieee_access_codes/ieee_ssc_bat.pid
+ieee_access_codes/ieee_ssc_bat.lastlog
+
+# ieee_access_paperdata 论文用模型权重（大文件，不提交到 GitHub）
+ieee_access_paperdata/models/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

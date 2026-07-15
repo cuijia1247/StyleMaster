@@ -1,6 +1,6 @@
 # SSC — Sub-Style Classification
 
-**Author:** cuijia1247 | **Started:** Oct. 2024 | **Current Version:** Apr. 2026（最后更新 2026-04-23）
+**Author:** cuijia1247 | **Started:** Oct. 2024 | **Current Version:** Jul. 2026（最后更新 2026-07-03）
 
 > Paper coming soon.
 
@@ -14,7 +14,9 @@ StyleMaster 是一个面向风格的特征学习框架，由两部分组成：
 
 SSC 核心思想：将同一幅画的两个随机裁剪子图（view1 / view2）送入 SSC 编码器，利用自监督损失约束特征空间，再训练轻量分类头完成风格判别。
 
-支持数据集：`Painting91` · `AVAstyle` · `WikiArt3` · `FashionStyle14` · `Pandora` · `Arch` · `WebStyle`（数据根下目录名 `webstyle`）· `artbench`
+支持数据集：`Painting91` · `Pandora` · `ArtBench`（目录名 `Artbench`）· `FashionStyle14` · `Arch` · `AVAstyle` · `WikiArt3` · `WebStyle`（`webstyle`）等。
+
+论文复现常用 **五数据集 benchmark**：Painting91、Pandora、ArtBench、FashionStyle14、Arch；数据根默认 `/mnt/codes/data/style/`，每库 **runs=3**，报告 **Accuracy / Macro-F1 / Weighted-F1 / Balanced Accuracy** 四项指标，汇总见 `ieee_access_paperdata/`。
 
 ---
 
@@ -49,13 +51,30 @@ SubStyleClassfication/
 │   ├── DAE.py / dae_train.py         # 堆叠 DAE（SDAE）+ 训练与六数据集评测
 │   ├── ConCURL.py / concurl_train.py # 投影 MLP + 分类头（ConCURL 式）+ 训练与六数据集评测
 │   └── *_result.md                   # 批量评测结果（本地生成，默认不提交）
-├── selfsupervised/                   # SimCLR / Barlow Twins 等自监督基线（六数据集 benchmark）
-│   ├── simclr_train.py               # SimCLR 预训练 + 线性探针
-│   ├── barlowtwins_train.py         # Barlow Twins + 线性探针
-│   ├── run_*_train_bat.sh           # nohup 批量训练（SSH 断连可续跑）
-│   ├── manage_*_train_bat.sh        # 启停 / tail 日志 / 查看结果表
-│   ├── logs/                         # 批量运行日志（本地，默认不提交）
-│   └── *_result.md                   # 评测汇总表（本地生成时可不提交）
+├── selfsupervised/                   # SimCLR / Barlow Twins 等自监督基线（五数据集 benchmark）
+│   ├── barlowtwins_train.py          # Barlow Twins 预训练 + 线性探针
+│   ├── run_*_train_bat.sh            # nohup 批量训练（SSH 断连可续跑）
+│   ├── manage_*_train_bat.sh         # 启停 / tail 日志 / 查看结果表
+│   └── logs/                         # 批量运行日志（本地，默认不提交）
+├── CLIP-based/                       # OpenCLIP 冻结编码器 + 线性探针 / 零样本
+│   ├── openclip_community_variants_train.py
+│   └── run_openclip_train_bat.sh / manage_openclip_train_bat.sh
+├── ST-SACLF-ncc_main/                # ST-SACLF / AdaIN 风格迁移与分类评估
+│   ├── models/                       # vgg_normalised.pth 等本地权重（不提交 git）
+│   ├── experiments/                  # AdaIN decoder 训练输出（不提交 git）
+│   └── pytorch-AdaIN/
+│       ├── train.py                  # AdaIN 训练 + 冻结 VGG 线性评估
+│       └── run_st_saclf_train_bat.sh / manage_st_saclf_train_bat.sh
+├── ieee_access_paperdata/            # 论文实验汇总 Markdown（各方法 × 五库 × runs=3）
+│   ├── simclr_multiple.md
+│   ├── BarlowTwins_multiple.md
+│   ├── MCCFNet_multiple.md
+│   ├── clip-based_multiple.md
+│   └── ST-SACLF_multiple.md
+├── simclr_train_root.py              # SimCLR（ResNet50）预训练 + 线性探针 + 五库 benchmark
+├── metaclip_train.py                 # MetaCLIP 冻结特征 + 线性分类头
+├── traditional_train.py              # 传统 backbone 线性探针（VGG16 / ResNet50 / ViT 等）
+├── ssc_train_densenet169.py          # SSC + 冻结 DenseNet169（VICReg 损失，3ch）
 ├── remote_sh/                        # 远程/服务器批处理辅助脚本
 │   ├── run_ssc_train_resnet_bat.sh / manage_ssc_train_resnet_bat.sh  # ResNet50+预提取特征 SSC，六数据集×每库 5 轮 best
 │   ├── resnet50_batch_result.md      # 上项批量汇总（R1–R5 + mean±std，运行后写入）
@@ -94,19 +113,46 @@ SubStyleClassfication/
 | `GradCAM/` | 本地 Grad-CAM++ 可视化脚本、测试图与输出（与主训练代码解耦，避免污染版本库） |
 | `experiment_result/*.md` | 各实验用 Markdown 汇总表（如 `ours_six_dataset.md`、传统探针结果等，本地生成） |
 | `data/`、`model/`、`pretrainFeatures/` 等 | 数据与权重（见上表及 `.gitignore`） |
+| `ST-SACLF-ncc_main/models/` | AdaIN 用 `vgg_normalised.pth` 等（本地放置，不提交） |
+| `ST-SACLF-ncc_main/experiments/` | AdaIN decoder 权重与可视化输出 |
+| `CLIP-based/logs/`、`ST-SACLF-ncc_main/pytorch-AdaIN/logs/` | 批量训练日志与 partial 中间结果 |
 
 ---
 
-## 安装
+## Conda 虚拟环境
 
-**环境要求：**
-- Python 3.8.19
-- PyTorch 2.1.0 + torchvision 0.16.0
-- CUDA（推荐）
+项目默认使用 Conda 环境 **`ssc`**（Python 3.8 + PyTorch 2.1 + CUDA）。批量脚本会自动尝试 `conda activate ssc`。
+
+### 创建与激活
 
 ```bash
+# 创建环境（若尚未创建）
+conda create -n ssc python=3.8 -y
+conda activate ssc
+
+# 安装核心依赖（与 requirements.txt 一致）
 pip install -r requirements.txt
+
+# 论文对比实验常用额外包（按需安装）
+pip install scikit-learn open-clip-torch tensorboardX imageio protobuf
 ```
+
+### 环境变量（可选）
+
+| 变量 | 说明 |
+|------|------|
+| `TORCH_HOME` | timm / torchvision 权重缓存，批量脚本默认指向 `./pretrainModels` |
+| `VGG_NORMALISED_PATH` | ST-SACLF AdaIN 用 VGG 权重路径，默认 `ST-SACLF-ncc_main/models/vgg_normalised.pth` |
+| `HF_ENDPOINT` | MetaCLIP / HuggingFace 镜像（如 `https://hf-mirror.com`） |
+
+### 验证
+
+```bash
+conda activate ssc
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+```
+
+> **注意：** `ST-SACLF-ncc_main/pytorch-AdaIN/requirements.txt` 为上游 AdaIN 旧版依赖清单，**请勿**据此降级 PyTorch；在 `ssc` 环境下直接运行 `train.py` 即可。
 
 ---
 
@@ -123,6 +169,97 @@ data/<DatasetName>/
 ```
 
 示例数据位于 `./data/DemoData/`。
+
+五库 benchmark 目录示例：`/mnt/codes/data/style/Painting91/train|test/`，类别子目录为从 **1** 开始的数字文件夹。
+
+---
+
+## 脚本索引
+
+以下按用途分类；带 **`run_*_train_bat.sh`** 的均可后台批量跑五库，配套 **`manage_*_train_bat.sh`** 用于启停、看日志、查看中间/最终结果。
+
+### StyleMaster 主方法（SSC）
+
+| 脚本 | 作用 |
+|------|------|
+| `ssc_train_transformer.py` | Transformer（Swin/ViT）SSC，VICReg 风格损失 |
+| `ssc_train_transformer_add.py` | Transformer SSC，BarlowTwins + SupCon（add 版） |
+| `ssc_train_resnet_copy.py` | ResNet50 **预提取 pkl 特征** + SSC + 分类头 |
+| `ssc_train_densnet169_add.py` | DenseNet169 **6ch RGB+HSV**，add 损失 + RWP 分类头 |
+| `ssc_train_densenet169.py` | DenseNet169 **3ch**，VICReg 损失 + EfficientClassifier |
+| `ssc_predict.py` | 推理：view1/view2 余弦相似度统计 |
+| `utils/pretrainFeatureExtraction.py` | 提取并缓存 backbone 特征至 `pretrainFeatures/` |
+
+| 批量脚本 | 管理脚本 | 说明 |
+|----------|----------|------|
+| `remote_sh/run_ssc_train_resnet_bat.sh` | `manage_ssc_train_resnet_bat.sh` | ResNet50 SSC，六库 × 每库 5 轮 best |
+| `remote_sh/run_add_ssc_train_vit_bat.sh` | `manage_add_ssc_train_vit_bat.sh` | add + ViT/Swin 六库批量 |
+| `remote_sh/run_add_ssc_train_densenet_bat.sh` | `manage_add_ssc_train_densenet_bat.sh` | add + DenseNet169 六库 × 3 次 |
+| `remote_sh/run_ssc_train_densenet_bat.sh` | `manage_ssc_train_densenet_bat.sh` | DenseNet169 SSC 六库批量 |
+
+### 自监督对比方法
+
+| 训练脚本 | 批量启动 | 管理 / 查看结果 | 结果文件 |
+|----------|----------|-----------------|----------|
+| `simclr_train_root.py` | `selfsupervised/run_simclr_train_bat.sh` | `manage_simclr_train_bat.sh` | `ieee_access_paperdata/simclr_multiple.md` |
+| `selfsupervised/barlowtwins_train.py` | `run_barlowtwins_train_bat.sh` | `manage_barlowtwins_train_bat.sh` | `ieee_access_paperdata/BarlowTwins_multiple.md` |
+| `vicreg_train.py` | `selfsupervised/run_vicreg_train.sh` | `manage_vicreg_train.sh` | `ieee_access_paperdata/vicreg_multiple.md` |
+
+`manage_*` 常用子命令：`start` · `stop` · `status` · `tail` · `logs` · `result` · `help`。前台调试： `./run_*_train_bat.sh fg`。
+
+### CLIP / 视觉-语言基线
+
+| 脚本 | 作用 |
+|------|------|
+| `CLIP-based/openclip_community_variants_train.py` | OpenCLIP 冻结 ViT-L/14；`linear_probe` / `zero_shot` 两模式，五库 × runs=3 |
+| `metaclip_train.py` | MetaCLIP 冻结特征 + 线性分类头 |
+| `clip_train.py` | 早期 CLIP 风格分类入口（单数据集） |
+
+| 批量脚本 | 管理脚本 | 结果文件 |
+|----------|----------|----------|
+| `CLIP-based/run_openclip_train_bat.sh` | `manage_openclip_train_bat.sh` | `ieee_access_paperdata/clip-based_multiple.md` |
+
+本地权重（不提交 git）：`pretrainModels/vit_large_patch16_224.pth`（linear_probe）、`pretrainModels/ViT-L-14-openai.pt`（zero_shot）。
+
+### ST-SACLF（AdaIN）
+
+| 脚本 | 作用 |
+|------|------|
+| `ST-SACLF-ncc_main/pytorch-AdaIN/train.py` | AdaIN decoder 训练（默认 `max_iter=10000`）+ 冻结 VGG 线性探针，五库 benchmark |
+| `ST-SACLF-ncc_main/pytorch-AdaIN/test.py` | AdaIN 风格迁移推理 |
+
+| 批量脚本 | 管理脚本 | 结果文件 |
+|----------|----------|----------|
+| `run_st_saclf_train_bat.sh` | `manage_st_saclf_train_bat.sh` | `ieee_access_paperdata/ST-SACLF_multiple.md` |
+
+`manage_st_saclf_train_bat.sh` 额外支持 **`partial [Dataset]`**（查看中间 partial 结果）、**`merge`**（重新合并总表）。
+
+本地权重：`ST-SACLF-ncc_main/models/vgg_normalised.pth`（运行前需自行放置）。
+
+### 监督 / 传统 / 去噪基线
+
+| 脚本 | 作用 |
+|------|------|
+| `traditional_train.py` | 冻结 ImageNet backbone（VGG16 / ResNet50 / ViT 等）+ 线性探针 |
+| `MCCFNet/mccfnet_train.py` | DenseNet169 + RWP + 6ch RGB+HSV 端到端监督 |
+| `denoise/sscae_train.py` | K 路 SCAE 共识 + 分类 |
+| `denoise/dae_train.py` | 堆叠 DAE + 分类 |
+| `denoise/concurl_train.py` | ConCURL 式投影 MLP + 线性头 |
+
+| 批量脚本 | 管理脚本 | 结果文件 |
+|----------|----------|----------|
+| `MCCFNet/run_mccfnet_train_bat.sh` | `manage_mccfnet_train_bat.sh` | `ieee_access_paperdata/MCCFNet_multiple.md` |
+| `remote_sh/run_traditional_train_bat.sh` | `manage_traditional_train_bat.sh` | `ieee_access_paperdata/vgg16_multiple.md` 等 |
+
+### 其他对比实现（目录内独立入口）
+
+| 方法 | 目录 | 入口 |
+|------|------|------|
+| Barlow Twins（库） | `barlowtwins/` | `barlowtwins_train.py` |
+| SimCLR（库） | `simclr/` | 由 `simclr_train_root.py` 调用 |
+| BYOL | `byol/` | `byol_train.py` |
+| SimSiam | `simsiam/` | `simsiam_train.py` |
+| I-JEPA | `I-JEPA-main/` | `ijepa_train.py` |
 
 ---
 
@@ -252,7 +389,37 @@ python MCCFNet/mccfnet_train.py --data_root <含 train/test 的根目录> --num_
 python MCCFNet/mccfnet_train.py --benchmark_all --data_base /mnt/codes/data/style/
 ```
 
-批量后台：`./MCCFNet/run_mccfnet_train_bat.sh`（详见同目录 `manage_mccfnet_train_bat.sh`）。
+批量后台：`./MCCFNet/run_mccfnet_train_bat.sh`（详见 `manage_mccfnet_train_bat.sh`）。
+
+### SimCLR（`simclr_train_root.py`）
+
+ResNet50 SimCLR 自监督预训练 + 线性探针；五库 benchmark，默认 runs=3。
+
+```bash
+python simclr_train_root.py --data_root /mnt/codes/data/style/Painting91 --num_classes 13 --runs 3
+./selfsupervised/run_simclr_train_bat.sh
+./selfsupervised/manage_simclr_train_bat.sh status
+```
+
+### OpenCLIP（`CLIP-based/`）
+
+```bash
+python CLIP-based/openclip_community_variants_train.py \
+  --data_root /mnt/codes/data/style/Painting91 --num_classes 13 \
+  --mode linear_probe --runs 3 --dataset_label Painting91
+./CLIP-based/run_openclip_train_bat.sh
+```
+
+### ST-SACLF AdaIN（`ST-SACLF-ncc_main/pytorch-AdaIN/`）
+
+```bash
+cd ST-SACLF-ncc_main/pytorch-AdaIN
+python train.py --data_root /mnt/codes/data/style/Painting91 --num_classes 13 --runs 3
+# 或项目根目录：
+./ST-SACLF-ncc_main/pytorch-AdaIN/manage_st_saclf_train_bat.sh start
+./ST-SACLF-ncc_main/pytorch-AdaIN/manage_st_saclf_train_bat.sh partial
+./ST-SACLF-ncc_main/pytorch-AdaIN/manage_st_saclf_train_bat.sh result
+```
 
 ---
 
@@ -288,6 +455,23 @@ python ssc_predict.py
 
 ## 实验结果与数据分析
 
+### 论文汇总表（`ieee_access_paperdata/`）
+
+各对比方法在五数据集上 **runs=3** 的四项指标（Accuracy / Macro-F1 / Weighted-F1 / Balanced Accuracy），格式统一，含 run1–run3 与 mean±std：
+
+| 文件 | 对应方法 |
+|------|----------|
+| `simclr_multiple.md` | SimCLR |
+| `BarlowTwins_multiple.md` | Barlow Twins |
+| `MCCFNet_multiple.md` | MCCFNet |
+| `clip-based_multiple.md` | OpenCLIP（linear_probe / zero_shot） |
+| `ST-SACLF_multiple.md` | ST-SACLF AdaIN |
+| `vgg16_multiple.md` / `resnet50_multiple.md` / `vit_l_16_multiple.md` | 传统线性探针 |
+
+训练进行中可通过各 `manage_*_train_bat.sh result` 或 ST-SACLF 的 `partial` 查看增量结果。
+
+### 数据分析脚本
+
 - **`experiment_result/Webstyle_analysis.py`**：在 `train` / `test` 等划分下，按类统计 `webstyle` 数据集中各子类图像数量；默认从 `remote_sh/run_ssc_train_resnet_bat.sh` 内嵌的 `DATA_ROOT` 与批量训练一致，也可用 `--data_root` 显式指定。
 
 ```bash
@@ -301,24 +485,24 @@ python experiment_result/Webstyle_analysis.py
 
 ## 对比方法
 
-| 方法 | 目录 | 入口 |
-|------|------|------|
-| Barlow Twins | `barlowtwins/` | `barlowtwins_train.py` |
-| SimCLR | `simclr/` | `simclr_train.py` |
+> 完整脚本说明见上文 **[脚本索引](#脚本索引)**。
+
+| 方法 | 目录 | 论文 benchmark 入口 |
+|------|------|---------------------|
+| SimCLR | `simclr/` + `simclr_train_root.py` | `selfsupervised/run_simclr_train_bat.sh` |
+| Barlow Twins | `barlowtwins/` + `selfsupervised/barlowtwins_train.py` | `selfsupervised/run_barlowtwins_train_bat.sh` |
+| OpenCLIP | `CLIP-based/` | `CLIP-based/run_openclip_train_bat.sh` |
+| ST-SACLF AdaIN | `ST-SACLF-ncc_main/pytorch-AdaIN/` | `run_st_saclf_train_bat.sh` |
+| MCCFNet | `MCCFNet/` | `MCCFNet/run_mccfnet_train_bat.sh` |
+| 传统线性探针 | 根目录 `traditional_train.py` | `remote_sh/run_traditional_train_bat.sh` |
 | BYOL | `byol/` | `byol_train.py` |
 | SimSiam | `simsiam/` | `simsiam_train.py` |
 | I-JEPA | `I-JEPA-main/` | `ijepa_train.py` |
+| MetaCLIP | 根目录 | `metaclip_train.py` |
 
-### 自监督六数据集批量（`selfsupervised/`）
+### 自监督五数据集批量（`selfsupervised/`）
 
-与 `traditional_train.py` 相同的数据根目录与类别数约定，默认 **`--benchmark_all --runs 3`**，结果追加到对应 `*_result.md`。适合服务器 **nohup** 后台，断开 SSH 仍可继续。
-
-| 任务 | 训练脚本 | 后台启动 | 进程与日志管理 |
-|------|----------|----------|----------------|
-| SimCLR | `selfsupervised/simclr_train.py` | `./selfsupervised/run_simclr_train_bat.sh` | `./selfsupervised/manage_simclr_train_bat.sh {start\|stop\|tail\|result\|…}` |
-| Barlow Twins | `selfsupervised/barlowtwins_train.py` | `./selfsupervised/run_barlowtwins_train_bat.sh` | `./selfsupervised/manage_barlowtwins_train_bat.sh …` |
-
-单次前台调试可加参数：`./selfsupervised/run_simclr_train_bat.sh fg`。
+默认 **runs=3**，结果写入 `ieee_access_paperdata/*.md`；`manage_*_train_bat.sh` 支持 `start` / `stop` / `status` / `tail` / `result`。前台调试：`./run_*_train_bat.sh fg`。
 
 ---
 

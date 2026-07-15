@@ -4,7 +4,7 @@
 # version: 1.1
 import argparse
 import statistics
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TypedDict, Union
 import logging                                          # 日志模块
 import time                                             # 时间模块，用于生成时间戳
 import os                                               # 操作系统接口模块
@@ -14,6 +14,7 @@ import torch.optim as optim                             # 优化器模块
 import torchvision.models as models                     # 预训练视觉模型库
 from torch.autograd import Variable                     # 自动微分变量（兼容旧版写法）
 import numpy as np                                      # 数值计算库
+from sklearn.metrics import balanced_accuracy_score, f1_score
 from ssc.Sscreg import SscReg                           # SSC ResNet 编码器模型
 from ssc.utils import criterion, get_ssc_transforms, MultiViewDataInjector  # 损失函数、数据增强、多视图注入器
 from SscDataSet_new import SscDataset                   # 懒加载版数据集（__getitem__ 实时随机增强）
@@ -23,6 +24,51 @@ from utils.pretrainFeatureExtraction import load_dataFeatures  # 加载预提取
 # 与 remote_sh/run_ssc_train_vit_bat.sh / ssc_train_transformer 中分类器设置保持一致：双卡占位，实际可同卡
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 device1 = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+
+
+class RunMetrics(TypedDict):
+    accuracy: float
+    macro_f1: float
+    weighted_f1: float
+    balanced_accuracy: float
+
+
+@torch.no_grad()
+def evaluate_efficient_classifier_four_metrics(
+    classifier: nn.Module,
+    test_ssc_cache: list,
+    device: torch.device,
+    class_number: int,
+) -> RunMetrics:
+    """在 test 缓存上计算 Accuracy / Macro-F1 / Weighted-F1 / Balanced Accuracy。"""
+    classifier.eval()
+    y_true: List[int] = []
+    y_pred: List[int] = []
+    for bb_feat, ssc_v1, ssc_v2, label in test_ssc_cache:
+        bb_feat = bb_feat.to(device)
+        ssc_v1 = ssc_v1.to(device)
+        ssc_v2 = ssc_v2.to(device)
+        prediction = classifier(ssc_v1, ssc_v2, bb_feat)
+        pred = prediction.argmax(dim=1)
+        y_true.extend(label.cpu().tolist())
+        y_pred.extend(pred.cpu().tolist())
+    if not y_true:
+        return RunMetrics(
+            accuracy=0.0, macro_f1=0.0, weighted_f1=0.0, balanced_accuracy=0.0
+        )
+    y_true_arr = np.asarray(y_true, dtype=np.int64)
+    y_pred_arr = np.asarray(y_pred, dtype=np.int64)
+    labels_all = list(range(class_number))
+    return RunMetrics(
+        accuracy=float(np.mean(y_true_arr == y_pred_arr)),
+        macro_f1=float(
+            f1_score(y_true_arr, y_pred_arr, average="macro", labels=labels_all, zero_division=0)
+        ),
+        weighted_f1=float(
+            f1_score(y_true_arr, y_pred_arr, average="weighted", labels=labels_all, zero_division=0)
+        ),
+        balanced_accuracy=float(balanced_accuracy_score(y_true_arr, y_pred_arr)),
+    )
 
 
 def parameter_load():
@@ -209,7 +255,8 @@ def SSCtrain(
     feature_name,
     train_args: Optional[argparse.Namespace] = None,
     dataset_repeat_runs: int = 1,
-) -> Tuple[List[float], float, float]:
+    collect_run_metrics: bool = False,
+) -> Union[Tuple[List[float], float, float], Tuple[List[float], float, float, List[RunMetrics]]]:
     """
     SSC ResNet 版主训练函数
     Args:
@@ -314,6 +361,7 @@ def SSCtrain(
     test_feature_dict = load_dataFeatures(test_feature_path)
 
     run_bests: List[float] = []
+    run_metrics_list: List[RunMetrics] = []
     for run_idx in range(dataset_repeat_runs):
         logger.info(
             "========== 数据集重复训练 [%d/%d]（每轮从头初始化 SSC）==========",
@@ -323,6 +371,8 @@ def SSCtrain(
         run_suffix = f"-run{run_idx}" if dataset_repeat_runs > 1 else ""
         # 多轮训练时把时间戳后缀写入文件名，避免 best/last checkpoint 互相覆盖
         time_str = current_time + run_suffix
+        best_classifier_state: Optional[Dict[str, torch.Tensor]] = None
+        last_test_ssc_cache: Optional[list] = None
 
         if training_mode == 'original':
             # 从头初始化 SSC 编码器
@@ -457,6 +507,7 @@ def SSCtrain(
                                     (label - 1).long().cpu(),
                                 )
                             )
+                    last_test_ssc_cache = test_ssc_cache
 
                     for i in range(classifier_iteration_):
                         trainstyle_loss = []            # 本轮每个 batch 的分类损失
@@ -542,6 +593,11 @@ def SSCtrain(
                                     test_accuracy,
                                 )
                                 best_accuracy = test_accuracy
+                                if collect_run_metrics:
+                                    best_classifier_state = {
+                                        k: v.detach().cpu().clone()
+                                        for k, v in classifier.state_dict().items()
+                                    }
 
                             logger.info(
                                 'Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f',
@@ -569,6 +625,30 @@ def SSCtrain(
                         logger.info('The last models are saved. The last accuracy is %f', last_accuracy)
 
         run_bests.append(best_accuracy)
+        if collect_run_metrics:
+            if best_classifier_state is not None and last_test_ssc_cache is not None:
+                probe = EfficientClassifier(ssc_output_, class_number).to(device)
+                probe.load_state_dict(best_classifier_state)
+                metrics = evaluate_efficient_classifier_four_metrics(
+                    probe, last_test_ssc_cache, device, class_number
+                )
+            else:
+                metrics = RunMetrics(
+                    accuracy=float("nan"),
+                    macro_f1=float("nan"),
+                    weighted_f1=float("nan"),
+                    balanced_accuracy=float("nan"),
+                )
+            run_metrics_list.append(metrics)
+            logger.info(
+                "[RUN_METRICS] run=%d/%d acc=%.4f macro_f1=%.4f weighted_f1=%.4f balanced_acc=%.4f",
+                run_idx + 1,
+                dataset_repeat_runs,
+                metrics["accuracy"],
+                metrics["macro_f1"],
+                metrics["weighted_f1"],
+                metrics["balanced_accuracy"],
+            )
         logger.info(
             '[RUN_BEST] run=%d/%d best_accuracy=%.6f',
             run_idx + 1,
@@ -586,6 +666,8 @@ def SSCtrain(
         mean_b,
         std_b,
     )
+    if collect_run_metrics:
+        return (run_bests, mean_b, std_b, run_metrics_list)
     return (run_bests, mean_b, std_b)
 
 
