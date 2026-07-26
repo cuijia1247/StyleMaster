@@ -1,8 +1,9 @@
 # SSC — Sub-Style Classification
 
-**Author:** cuijia1247 | **Started:** Oct. 2024 | **Current Version:** Jul. 2026（最后更新 2026-07-03）
+**Author:** cuijia1247 | **Started:** Oct. 2024 | **Current Version:** Jul. 2026（最后更新 2026-07-26）
 
-> Paper coming soon.
+> Paper coming soon.  
+> **GitHub 里程碑标签：** `ieee_code_done`（IEEE Access 实验代码与论文数据汇总已完成）
 
 ---
 
@@ -31,10 +32,18 @@ SubStyleClassfication/
 │   ├── classifier.py                 # 分类头（Classifier / EfficientClassifier）
 │   ├── classifier_enhance.py         # 增强版分类头（StyleEnhancer 门控 + 多路融合）
 │   ├── classifier_enhance_add.py     # add 系列四路融合 + SingleViewStyleEnhancer；EfficientRWPClassifier（head 内 RWP）
+│   ├── classifier_ieee.py            # IEEE 论文消融：全通道 / 无抑制 / 随机 / 低相关 / 高相关通道抑制分类头
 │   ├── Sscreg_densenet169.py         # DenseNet169 冻结骨干 + 6ch 投影 SSC 编码器（1664→1664）
 │   ├── classifier_original.py        # 原始分类头存档
 │   ├── utils.py                      # 原版损失函数（VICReg + 正交化）
 │   └── utils_add.py                  # add 版损失函数（BarlowTwins + SupCon）
+├── ieee_access_codes/                # IEEE Access 论文专用脚本（标签 ieee_code_done）
+│   ├── ssc_predict_ieee.py           # SSC-ResNet50 测试集推理、推理计时与 failure case 收集
+│   ├── ieee_bootstrap.py             # Bootstrap 显著性检验
+│   ├── correlation-based_feature_suppression.py  # 通道相关抑制消融实验
+│   ├── plot_ieee_ssc_confusion_matrix.py        # 混淆矩阵可视化
+│   ├── run_ieee_ssc_train_bat.sh     # 五库 SSC benchmark 后台批量
+│   └── manage_ieee_ssc_train_bat.sh
 ├── utils/                            # 工具脚本
 │   ├── pretrainFeatureExtraction.py  # 预训练特征提取与加载
 │   ├── image_processing.py           # 图像处理工具
@@ -65,15 +74,19 @@ SubStyleClassfication/
 │   └── pytorch-AdaIN/
 │       ├── train.py                  # AdaIN 训练 + 冻结 VGG 线性评估
 │       └── run_st_saclf_train_bat.sh / manage_st_saclf_train_bat.sh
-├── ieee_access_paperdata/            # 论文实验汇总 Markdown（各方法 × 五库 × runs=3）
-│   ├── simclr_multiple.md
-│   ├── BarlowTwins_multiple.md
-│   ├── MCCFNet_multiple.md
-│   ├── clip-based_multiple.md
-│   └── ST-SACLF_multiple.md
+├── ieee_access_paperdata/            # 论文实验汇总 Markdown / 图表 / 错误案例分析
+│   ├── ours_multiple.md              # Ours（SSC-ResNet50）五库 benchmark
+│   ├── simclr_multiple.md / BarlowTwins_multiple.md / MCCFNet_multiple.md
+│   ├── clip-based_multiple.md / ST-SACLF_multiple.md / vit_l_16_multiple.md
+│   ├── ssc_failure_case_list.md      # SSC 测试集预测错误样本
+│   ├── ivt_failure_case_list.md      # ViT-L/16 传统探针测试集错误样本
+│   ├── qualitative_vis_list.md       # ViT 错 / SSC 对 — 定性可视化候选清单
+│   ├── ieee_bootstrap.md             # Bootstrap 检验结果
+│   ├── correlation-based_feature_suppression.md  # 通道抑制消融结果
+│   └── ours_ssc_confusion_matrix_*.png         # 各数据集混淆矩阵图
 ├── simclr_train_root.py              # SimCLR（ResNet50）预训练 + 线性探针 + 五库 benchmark
 ├── metaclip_train.py                 # MetaCLIP 冻结特征 + 线性分类头
-├── traditional_train.py              # 传统 backbone 线性探针（VGG16 / ResNet50 / ViT 等）
+├── traditional_train.py              # 传统 backbone 线性探针；多数据集 failure case + 推理计时
 ├── ssc_train_densenet169.py          # SSC + 冻结 DenseNet169（VICReg 损失，3ch）
 ├── remote_sh/                        # 远程/服务器批处理辅助脚本
 │   ├── run_ssc_train_resnet_bat.sh / manage_ssc_train_resnet_bat.sh  # ResNet50+预提取特征 SSC，六数据集×每库 5 轮 best
@@ -91,7 +104,9 @@ SubStyleClassfication/
 ├── ssc_train_transformer.py          # Transformer 版训练入口（原版损失）
 ├── ssc_train_transformer_add.py      # Transformer 版训练入口（add 版损失 + 四路分类头）
 ├── ssc_train_densnet169_add.py       # DenseNet169-6ch + add 损失 + 内存 GAP 缓存 + EfficientRWPClassifier
-├── ssc_predict.py                    # 推理：计算 view1/view2 余弦相似度统计
+├── ieee_ssc_train_resnet.py          # 论文主方法：SSC-ResNet50 五库 benchmark（runs=3，四项指标）
+├── ssc_predict.py                    # 推理：view1/view2 余弦相似度统计；含单图推理耗时
+├── barlowtwins_train.py              # Barlow Twins 训练；分类器 test 轮次含推理计时
 ├── SscDataSet_new.py                 # 数据集加载器（当前主用）
 ├── SscDataSet.py                     # 数据集加载器（旧版）
 ├── pretrainModels/                   # 本地预训练权重（不提交 git）
@@ -110,7 +125,7 @@ SubStyleClassfication/
 
 | 路径 | 说明 |
 |------|------|
-| `GradCAM/` | 本地 Grad-CAM++ 可视化脚本、测试图与输出（与主训练代码解耦，避免污染版本库） |
+| `GradCAM/` | 本地 Grad-CAM++ 可视化（`gramcam.py` / `gramcam_ours.py` / `gramcam_vit_ssc.py`）、权重与 `output_vit_ssc/` 等（不提交 git） |
 | `experiment_result/*.md` | 各实验用 Markdown 汇总表（如 `ours_six_dataset.md`、传统探针结果等，本地生成） |
 | `data/`、`model/`、`pretrainFeatures/` 等 | 数据与权重（见上表及 `.gitignore`） |
 | `ST-SACLF-ncc_main/models/` | AdaIN 用 `vgg_normalised.pth` 等（本地放置，不提交） |
@@ -187,7 +202,9 @@ data/<DatasetName>/
 | `ssc_train_resnet_copy.py` | ResNet50 **预提取 pkl 特征** + SSC + 分类头 |
 | `ssc_train_densnet169_add.py` | DenseNet169 **6ch RGB+HSV**，add 损失 + RWP 分类头 |
 | `ssc_train_densenet169.py` | DenseNet169 **3ch**，VICReg 损失 + EfficientClassifier |
-| `ssc_predict.py` | 推理：view1/view2 余弦相似度统计 |
+| `ssc_predict.py` | 推理：view1/view2 余弦相似度统计；含整集推理耗时 |
+| `ieee_ssc_train_resnet.py` | 论文 Ours：五库 SSC-ResNet50 benchmark → `ours_multiple.md` |
+| `ieee_access_codes/ssc_predict_ieee.py` | 加载 best checkpoint 测试集推理 + failure case → `ssc_failure_case_list.md` |
 | `utils/pretrainFeatureExtraction.py` | 提取并缓存 backbone 特征至 `pretrainFeatures/` |
 
 | 批量脚本 | 管理脚本 | 说明 |
@@ -240,7 +257,7 @@ data/<DatasetName>/
 
 | 脚本 | 作用 |
 |------|------|
-| `traditional_train.py` | 冻结 ImageNet backbone（VGG16 / ResNet50 / ViT 等）+ 线性探针 |
+| `traditional_train.py` | 冻结 ImageNet backbone（VGG16 / ResNet50 / ViT-L/16 等）+ 线性探针；支持多数据集 failure case 收集与 test 轮次推理计时 |
 | `MCCFNet/mccfnet_train.py` | DenseNet169 + RWP + 6ch RGB+HSV 端到端监督 |
 | `denoise/sscae_train.py` | K 路 SCAE 共识 + 分类 |
 | `denoise/dae_train.py` | 堆叠 DAE + 分类 |
@@ -306,6 +323,7 @@ model = SscReg(backend='resnet50', input_size=2048, output_size=2048)
 | `EfficientClassifier` | `classifier_enhance.py` | 四路拼接（backbone / 残差 / 软正交去噪）+ MLP | Transformer 训练脚本当前所用 |
 | `EfficientClassifier` | `classifier_enhance_add.py` | 四路各 256（bb / view1 增强 / view2 增强 / 双视图 MLP）→1024→512→256→cls；无 Dropout | add 版 Transformer 脚本默认 |
 | `EfficientRWPClassifier` | `classifier_enhance_add.py` | 与上同四路；融合 head 中 Dropout 换 RegionalWeightedPooling | `ssc_train_densnet169_add.py` 默认 |
+| `EfficientClassifier`（IEEE 消融） | `classifier_ieee.py` | 通道相关抑制变体（全通道 / 无抑制 / 随机 / 低相关 / 高相关） | `correlation-based_feature_suppression.py` |
 | `StyleEnhancer` | `classifier_enhance_add.py` | 双视图公共风格门控增强（可供实验复用） | — |
 
 ---
@@ -448,8 +466,75 @@ $$\mathcal{L} = \lambda_{\text{align}} \cdot \mathcal{L}_{\text{BT}} + \lambda_{
 ## 推理
 
 ```bash
+# SSC 编码器：view1/view2 余弦相似度 + 推理耗时
 python ssc_predict.py
+
+# IEEE 论文：SSC-ResNet50 测试集准确率 + failure case + 推理耗时
+python ieee_access_codes/ssc_predict_ieee.py
+python ieee_access_codes/ssc_predict_ieee.py --datasets Painting91 FashionStyle14
 ```
+
+---
+
+## IEEE Access 论文实验（`ieee_code_done`）
+
+论文复现相关脚本与产出集中在 `ieee_access_codes/` 与 `ieee_access_paperdata/`。
+
+### 主方法训练与 benchmark
+
+```bash
+# 五数据集 SSC-ResNet50（runs=3，Acc / Macro-F1 / Weighted-F1 / Balanced Acc）
+python ieee_ssc_train_resnet.py --benchmark_all
+
+# 单数据集
+python ieee_ssc_train_resnet.py --dataset_name Painting91 --runs 3
+
+# 后台批量
+./ieee_access_codes/manage_ieee_ssc_train_bat.sh start
+```
+
+结果写入 `ieee_access_paperdata/ours_multiple.md`。最佳 checkpoint 默认存放于 `ieee_access_paperdata/models/`（本地，不提交 git）。
+
+### 测试集推理与错误案例分析
+
+```bash
+# SSC 预测错误 → ssc_failure_case_list.md
+python ieee_access_codes/ssc_predict_ieee.py
+
+# ViT-L/16 传统探针错误案例（Painting91 + FashionStyle14，runs=1）
+python traditional_train.py \
+  --backbone vit_l_16 \
+  --benchmark_datasets Painting91 FashionStyle14 \
+  --runs 1 \
+  --failure_md ieee_access_paperdata/ivt_failure_case_list.md
+```
+
+### 定性可视化候选（ViT 错 / SSC 对）
+
+`ieee_access_paperdata/qualitative_vis_list.md` 由 `ivt_failure_case_list.md` 与 `ssc_failure_case_list.md` 交叉筛选得到。本地 Grad-CAM 对比（不提交 git）：
+
+```bash
+python GradCAM/gramcam_vit_ssc.py
+# 输出：GradCAM/output_vit_ssc/（原图 | ViT | SSC 对比图）
+```
+
+### 统计检验与消融
+
+```bash
+python ieee_access_codes/ieee_bootstrap.py
+python ieee_access_codes/correlation-based_feature_suppression.py
+python ieee_access_codes/plot_ieee_ssc_confusion_matrix.py
+```
+
+对应结果：`ieee_bootstrap.md`、`correlation-based_feature_suppression.md`、`ours_ssc_confusion_matrix_*.png`。
+
+### 传统 ViT 探针（含推理计时）
+
+```bash
+python traditional_train.py --backbone vit_l_16 --data_root /mnt/codes/data/style/Painting91 --runs 1
+```
+
+test 轮次（每 10 iter）日志输出 `inference_time` 与 `ms/image`（端到端：backbone + 分类头）。
 
 ---
 
@@ -461,12 +546,23 @@ python ssc_predict.py
 
 | 文件 | 对应方法 |
 |------|----------|
+| `ours_multiple.md` | **Ours（SSC-ResNet50）** |
 | `simclr_multiple.md` | SimCLR |
 | `BarlowTwins_multiple.md` | Barlow Twins |
 | `MCCFNet_multiple.md` | MCCFNet |
 | `clip-based_multiple.md` | OpenCLIP（linear_probe / zero_shot） |
 | `ST-SACLF_multiple.md` | ST-SACLF AdaIN |
 | `vgg16_multiple.md` / `resnet50_multiple.md` / `vit_l_16_multiple.md` | 传统线性探针 |
+
+### 错误案例与定性分析
+
+| 文件 | 说明 |
+|------|------|
+| `ssc_failure_case_list.md` | SSC-ResNet50 测试集预测错误（含推理时间） |
+| `ivt_failure_case_list.md` | ViT-L/16 传统探针测试集预测错误 |
+| `qualitative_vis_list.md` | ViT 判错且 SSC 判对的样本清单（Grad-CAM 候选） |
+| `ieee_bootstrap.md` | Bootstrap 显著性检验 |
+| `correlation-based_feature_suppression.md` | 通道相关抑制消融 |
 
 训练进行中可通过各 `manage_*_train_bat.sh result` 或 ST-SACLF 的 `partial` 查看增量结果。
 
@@ -518,7 +614,29 @@ python experiment_result/Webstyle_analysis.py
 
 **公共参数（示例）：** `--data_root` / `--num_classes`（单数据集）；`--benchmark_all` + `--data_base`（默认 `/mnt/codes/data/style/`）；`--backbone`（默认 `vgg16`）；`--run` / `--runs`（重复次数与 mean±std，默认 3）；`--result_md`（结果 Markdown 路径）。
 
-**传统线性探针（多 backbone 对比）：** `python traditional_train.py --backbone resnet50 --data_root <数据集根目录>`。
+**传统线性探针（多 backbone 对比）：**
+
+```bash
+python traditional_train.py --backbone vit_l_16 --data_root /mnt/codes/data/style/Painting91 --runs 1
+python traditional_train.py --backbone vit_l_16 --benchmark_datasets Painting91 FashionStyle14 --runs 1
+```
+
+---
+
+## 版本与远程仓库
+
+| 远程 | 地址 | 说明 |
+|------|------|------|
+| GitHub | `git@github.com:cuijia1247/StyleMaster.git` | 主远程（`github`） |
+| Gitee | `git@gitee.com:cuijia_1247/SubStyleClassfication.git` | 备用（`origin`） |
+
+检出 IEEE 代码完成版本：
+
+```bash
+git clone git@github.com:cuijia1247/StyleMaster.git
+cd StyleMaster
+git checkout ieee_code_done
+```
 
 ---
 
