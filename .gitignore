@@ -39,8 +39,9 @@ selfsupervised/barlowtwins_bat.pid
 MCCFNet/logs/
 MCCFNet/mccfnet_train_bat.pid
 
-# CLIP-based OpenCLIP 批量：日志与 PID（本地）
+# CLIP-based OpenCLIP 批量：日志、模型权重与 PID（本地）
 CLIP-based/logs/
+CLIP-based/model/
 CLIP-based/openclip_bat.pid
 CLIP-based/openclip_bat.lastlog
 

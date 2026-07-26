@@ -43,7 +43,7 @@ DEFAULT_RESULT_MD = os.path.join(
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 PRETRAIN_DIR = os.path.join(PROJECT_ROOT, "pretrainModels")
-MODEL_DIR = os.path.join(PROJECT_ROOT, "model")
+MODEL_DIR = os.path.join(os.path.dirname(__file__), "model")
 LOG_DIR = os.path.join(PROJECT_ROOT, "log")
 BATCH_SIZE = 32
 CLASSIFIER_LR = 1e-4
@@ -579,6 +579,20 @@ def write_result_markdown(
         f.write("\n".join(lines))
 
 
+def _sanitize_save_tag(label: str) -> str:
+    """将 backbone 显示名转为安全文件名片段。"""
+    short = label.split(" (local:")[0].strip()
+    tag = re.sub(r"[^\w\-.]+", "_", short)
+    return tag.strip("_") or "backbone"
+
+
+def _build_classifier_save_name(
+    dataset_name: str, exp_display: str, mode: str, accuracy: float
+) -> str:
+    tag = _sanitize_save_tag(exp_display)
+    return f"oc-{dataset_name}-{tag}-{mode}-acc{accuracy:.4f}.pth"
+
+
 def _save_run_markdown(
     result_md: str,
     dataset_name: str,
@@ -764,11 +778,12 @@ def run_once(
     )
     if args.save_classifier:
         dataset_name = os.path.basename(args.data_root.rstrip("/"))
-        tag = exp_display.replace("-", "").replace(" ", "")
-        save_name = (
-            f"oc-{dataset_name}-{tag}-{args.mode}-acc{metrics['accuracy']:.4f}.pth"
+        save_name = _build_classifier_save_name(
+            dataset_name, exp_display, args.mode, metrics["accuracy"]
         )
-        torch.save(classifier.state_dict(), os.path.join(MODEL_DIR, save_name))
+        save_path = os.path.join(MODEL_DIR, save_name)
+        torch.save(classifier.state_dict(), save_path)
+        logger.info("分类头已保存: %s", save_path)
     return metrics
 
 

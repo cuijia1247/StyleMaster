@@ -181,37 +181,50 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
                 if i % classifier_test_gap_ == classifier_test_gap_-1:
                     test_correct = 0.0
                     classifier.eval()
-                    for view1, view2, label, name, original in tk2:
-                        correct_ = 0.0
-                        view1 = view1.to(device).detach()
-                        view2 = view2.to(device).detach()
-                        z1, z2 = model.forward(view1, view2)
-                        #############simclr in ssc way
-                        original = original.to(device)
-                        backbone_view = resnet50(original)
-                        test1 = backbone_view - z1  # only use view 1
-                        test2 = backbone_view - z2
-                        ###########################
-                        # test1 = data_dict['z1']  # only use view 1
-                        # test2 = data_dict['z2']
-                        test = test1 + test2
-                        prediction = classifier(test)
-                        # val, idx = prediction.topk(1)
-                        # idx = idx.t().squeeze()
-                        # idx = idx.cpu().float()
-                        # original_label = label
-                        # label = label.cpu().float()-1
-                        label = label - 1
-                        label = Variable(label).cuda()
-                        # style_loss = classifier_criterion(prediction, label)
-                        # classifier_optimizer.zero_grad()
-                        # style_loss.requires_grad_()
-                        # style_loss.backward()
-                        # classifier_optimizer.step()
-                        pred = prediction.data.max(1, keepdim=True)[1]
-                        correct_ += pred.eq(label.data.view_as(pred)).cpu().sum()
-                        # correct = idx.eq(label).cpu().sum()
-                        test_correct += correct_
+                    model.eval()
+                    resnet50.eval()
+                    # 统计整轮 test 集推理耗时（含 BarlowTwins + ResNet50 + Classifier）
+                    if torch.cuda.is_available():
+                        torch.cuda.synchronize()
+                    t_infer_start = time.perf_counter()
+                    with torch.no_grad():
+                        for view1, view2, label, name, original in tk2:
+                            correct_ = 0.0
+                            view1 = view1.to(device)
+                            view2 = view2.to(device)
+                            z1, z2 = model.forward(view1, view2)
+                            #############simclr in ssc way
+                            original = original.to(device)
+                            backbone_view = resnet50(original)
+                            test1 = backbone_view - z1  # only use view 1
+                            test2 = backbone_view - z2
+                            ###########################
+                            # test1 = data_dict['z1']  # only use view 1
+                            # test2 = data_dict['z2']
+                            test = test1 + test2
+                            prediction = classifier(test)
+                            # val, idx = prediction.topk(1)
+                            # idx = idx.t().squeeze()
+                            # idx = idx.cpu().float()
+                            # original_label = label
+                            # label = label.cpu().float()-1
+                            label = label - 1
+                            label = label.to(device)
+                            # style_loss = classifier_criterion(prediction, label)
+                            # classifier_optimizer.zero_grad()
+                            # style_loss.requires_grad_()
+                            # style_loss.backward()
+                            # classifier_optimizer.step()
+                            pred = prediction.argmax(dim=1, keepdim=True)
+                            correct_ += pred.eq(label.view_as(pred)).sum().item()
+                            # correct = idx.eq(label).cpu().sum()
+                            test_correct += correct_
+                    model.train()
+
+                    if torch.cuda.is_available():
+                        torch.cuda.synchronize()
+                    inference_time_s = time.perf_counter() - t_infer_start
+                    per_sample_ms = inference_time_s / len(testset) * 1000.0
 
                     # print('TEST RESULTS: The test round is {}, the test ratio is {}/{}, the test accuracy is {}'.format(i,
                     #             test_correct, len(testset), float(test_correct/len(testset))))
@@ -227,9 +240,10 @@ def byol_train(logger, model_path, current_time, opt_model_name, dataset, class_
                             best_accuracy, test_accuracy)
                         best_accuracy = test_accuracy
                     logger.info(
-                        'Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f', i,
-                        test_correct,
-                        len(testset), test_accuracy)
+                        'Test result is: The test round is %d, the test ratio is %d/%d, the test accuracy is %f, '
+                        'inference_time=%.3fs (%.3fms/sample)',
+                        i, test_correct, len(testset), test_accuracy,
+                        inference_time_s, per_sample_ms)
             total_loss += np.mean(trainstyle_loss)
             # total_loss = total_loss / 50
             if epoch == epochs - 1:

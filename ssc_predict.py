@@ -12,7 +12,7 @@ from ssc.utils import get_ssc_transforms, MultiViewDataInjector
 import os
 
 # Setup device for cuda or cpu
-device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
 def compute_cosine_similarity(features1, features2):
     """
@@ -72,6 +72,7 @@ def ssc_predict(model_path, dataSource, dataset_name='FashionStyle14'):
     data_splits = ['train', 'test', 'val']
     all_cosine_sims = []  # 只存储cosine_sim值
     total_samples = 0
+    inference_time_s = 0.0  # SSC 前向推理累计耗时（view1 + view2）
     
     for split_name in data_splits:
         split_path = os.path.join(dataSource, split_name)
@@ -103,10 +104,16 @@ def ssc_predict(model_path, dataSource, dataset_name='FashionStyle14'):
                 # Move to device
                 view1 = view1.to(device)
                 view2 = view2.to(device)
-                
-                # Compute features
+
+                # 统计单张图片推理时间：每张图含 view1/view2 两次 SSC 前向
+                if torch.cuda.is_available():
+                    torch.cuda.synchronize()
+                t_batch_start = time.perf_counter()
                 features1 = model(view1)  # (batch_size, feature_dim)
                 features2 = model(view2)   # (batch_size, feature_dim)
+                if torch.cuda.is_available():
+                    torch.cuda.synchronize()
+                inference_time_s += time.perf_counter() - t_batch_start
                 
                 # Compute cosine similarity
                 cosine_sim = compute_cosine_similarity(features1, features2)
@@ -136,12 +143,15 @@ def ssc_predict(model_path, dataSource, dataset_name='FashionStyle14'):
     variance_sim = np.var(cosine_sims_array)  # 方差
     min_sim = np.min(cosine_sims_array)
     max_sim = np.max(cosine_sims_array)
+    per_image_ms = inference_time_s / total_samples * 1000.0 if total_samples > 0 else 0.0
     
     # 在屏幕上显示统计结果
     print('\n' + '=' * 100)
     print('COSINE SIMILARITY STATISTICS - ENTIRE DATABASE:')
     print('=' * 100)
     print(f'Total Samples: {total_samples}')
+    print(f'Inference Time (total): {inference_time_s:.3f} s')
+    print(f'Inference Time (per image): {per_image_ms:.3f} ms/image')
     print(f'Mean (均值):     {mean_sim:.6f}')
     print(f'Variance (方差): {variance_sim:.6f}')
     print(f'Std (标准差):    {std_sim:.6f}')
@@ -152,6 +162,8 @@ def ssc_predict(model_path, dataSource, dataset_name='FashionStyle14'):
     logger.info('=' * 100)
     logger.info('COSINE SIMILARITY STATISTICS - ENTIRE DATABASE:')
     logger.info(f'Total Samples: {total_samples}')
+    logger.info(f'Inference Time (total): {inference_time_s:.3f} s')
+    logger.info(f'Inference Time (per image): {per_image_ms:.3f} ms/image')
     logger.info(f'Mean (均值):     {mean_sim:.6f}')
     logger.info(f'Variance (方差): {variance_sim:.6f}')
     logger.info(f'Std (标准差):    {std_sim:.6f}')
@@ -165,7 +177,9 @@ def ssc_predict(model_path, dataSource, dataset_name='FashionStyle14'):
         'std': std_sim,
         'min': min_sim,
         'max': max_sim,
-        'total_samples': total_samples
+        'total_samples': total_samples,
+        'inference_time_s': inference_time_s,
+        'per_image_ms': per_image_ms,
     }
 
 if __name__ == '__main__':
@@ -184,10 +198,14 @@ if __name__ == '__main__':
     filehandler.setFormatter(formatter)
     logger.addHandler(filehandler)
     
-    # Configuration for AVAstyle dataset
-    model_path = './model/ssc_AVAstyle_resnet_51.30/ssc-AVAstyle-SSC-resnet50-2025-10-26-13-28-51-iteration-0-accuracy-5130-SSC-base-best.pth'
-    dataSource = '/home/cuijia1247/Codes/SubStyleClassfication/data/AVAstyle/'  # the '/' is necessary
-    dataset_name = 'AVAstyle'
+    # Configuration for Painting91 dataset
+    model_path = (
+        './ieee_access_paperdata/models/'
+        'ssc-Painting91-SSC-resnet50-2026-07-03-09-32-06-run2-'
+        'iteration-0-accuracy-7353-SSC-base-best.pth'
+    )
+    dataSource = '/mnt/codes/data/style/Painting91/'  # the '/' is necessary
+    dataset_name = 'Painting91'
     
     logger.info('Configuration:')
     logger.info(f'Model path: {model_path}')
